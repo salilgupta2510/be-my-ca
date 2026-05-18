@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown } from "lucide-react";
+import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown, BookOpen, FlaskConical } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -16,6 +16,8 @@ const NAV = [
   { href: "/reconciliation/gst", label: "GSTR-2B Reconciliation", icon: GitMerge },
   { href: "/returns/gstr1", label: "GSTR-1", icon: FileText },
   { href: "/returns/gstr3b", label: "GSTR-3B", icon: FileText },
+  { href: "/guide", label: "User Guide", icon: BookOpen },
+  { href: "/sample-data", label: "Sample Data", icon: FlaskConical },
 ];
 
 type NavItem =

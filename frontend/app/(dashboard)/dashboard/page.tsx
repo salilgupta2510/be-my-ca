@@ -3,52 +3,30 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, FileText, PlusCircle, ReceiptText, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 const PERIOD = "2025-01";
+const CACHE_KEY = `dashboard:${PERIOD}`;
 
 function token() {
   return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : "";
 }
-
 function authHeaders() {
   return { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" };
 }
-
 function fmt(n: number) {
   return "₹" + n.toLocaleString("en-IN");
 }
 
-interface Business {
-  legal_name: string;
-  gstin: string;
-  state_code: string;
-  return_frequency: string;
-}
-
-interface GSTR3BPayload {
-  outward_tax_liability: { total: number };
-  itc_available: { total: number };
-  net_tax_payable: { total: number };
-  reconciliation_done: boolean;
-}
-
-interface GSTR3B {
-  id: string;
-  status: string;
-  total_tax_payable: number;
-  itc_claimed: number;
-  computed_payload: GSTR3BPayload | null;
-}
-
-interface ReconSummary {
-  matched: number;
-  missing_in_2b: number;
-  missing_in_books: number;
-  amount_mismatch: number;
-}
+interface Business { legal_name: string; gstin: string; state_code: string; return_frequency: string; }
+interface GSTR3BPayload { outward_tax_liability: { total: number }; itc_available: { total: number }; net_tax_payable: { total: number }; reconciliation_done: boolean; }
+interface GSTR3B { id: string; status: string; total_tax_payable: number; itc_claimed: number; computed_payload: GSTR3BPayload | null; }
+interface ReconSummary { matched: number; missing_in_2b: number; missing_in_books: number; amount_mismatch: number; }
+interface CacheData { business: Business | null; gstr3b: GSTR3B | null; recon: ReconSummary | null; }
 
 function filingDeadline(day: number) {
   const now = new Date();
@@ -60,44 +38,74 @@ function filingDeadline(day: number) {
   return { label: `${diff}d left`, color: "bg-green-700" };
 }
 
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64 bg-slate-800" />
+          <Skeleton className="h-4 w-48 bg-slate-800" />
+        </div>
+        <Skeleton className="h-10 w-36 bg-slate-800" />
+      </div>
+      <Skeleton className="h-36 w-full bg-slate-800 rounded-xl" />
+      <div className="grid grid-cols-2 gap-4">
+        <Skeleton className="h-20 bg-slate-800 rounded-xl" />
+        <Skeleton className="h-20 bg-slate-800 rounded-xl" />
+      </div>
+      <div className="grid grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 bg-slate-800 rounded-xl" />)}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [gstr3b, setGstr3b] = useState<GSTR3B | null>(null);
-  const [recon, setRecon] = useState<ReconSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cached = cacheGet<CacheData>(CACHE_KEY);
+  const [business, setBusiness] = useState<Business | null>(cached?.business ?? null);
+  const [gstr3b, setGstr3b] = useState<GSTR3B | null>(cached?.gstr3b ?? null);
+  const [recon, setRecon] = useState<ReconSummary | null>(cached?.recon ?? null);
+  const [loading, setLoading] = useState(!cached);
 
   useEffect(() => {
-    async function load() {
+    async function load(silent: boolean) {
+      if (!silent) setLoading(true);
       try {
         const [bRes, reconRes] = await Promise.all([
           fetch(`${API}/business/me`, { headers: authHeaders() }),
           fetch(`${API}/gst/reconciliation/summary?period=${PERIOD}`, { headers: authHeaders() }),
         ]);
-        if (bRes.ok) setBusiness(await bRes.json());
-        if (reconRes.ok) setRecon(await reconRes.json());
+        const bData = bRes.ok ? await bRes.json() : null;
+        const reconData = reconRes.ok ? await reconRes.json() : null;
+        if (bData) setBusiness(bData);
+        if (reconData) setRecon(reconData);
 
         const g3Res = await fetch(`${API}/returns/gstr3b?period=${PERIOD}`, { headers: authHeaders() });
-        if (g3Res.ok) setGstr3b(await g3Res.json());
+        const g3Data = g3Res.ok ? await g3Res.json() : null;
+        if (g3Data) setGstr3b(g3Data);
+
+        cacheSet(CACHE_KEY, { business: bData, gstr3b: g3Data, recon: reconData });
       } finally {
         setLoading(false);
       }
     }
-    load();
+    load(!!cached);
   }, []);
+
+  if (loading) return <DashboardSkeleton />;
 
   const gstr1Due = filingDeadline(11);
   const gstr3bDue = filingDeadline(20);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">
-            {business ? business.legal_name : "Dashboard"}
+            {business?.legal_name ?? "Dashboard"}
           </h1>
           <p className="text-slate-400 text-sm mt-0.5">
-            {business ? `GSTIN ${business.gstin} · ${PERIOD}` : "Loading…"}
+            {business ? `GSTIN ${business.gstin} · ${PERIOD}` : PERIOD}
           </p>
         </div>
         <Link href="/invoices/outward/new">
@@ -107,14 +115,13 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Hero: Net GST payable */}
       <Card className="bg-gradient-to-r from-blue-950 to-slate-900 border-blue-800">
         <CardContent className="p-6">
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
               <p className="text-slate-400 text-sm">GST to pay this month</p>
               <p className="text-4xl font-bold text-white mt-1">
-                {gstr3b ? fmt(gstr3b.total_tax_payable) : loading ? "Loading…" : "—"}
+                {gstr3b ? fmt(gstr3b.total_tax_payable) : "—"}
               </p>
               {gstr3b?.computed_payload && (
                 <div className="flex gap-6 mt-3 text-sm text-slate-400">
@@ -122,9 +129,7 @@ export default function DashboardPage() {
                   <span>ITC credit: <span className="text-green-400">−{fmt(gstr3b.computed_payload.itc_available.total)}</span></span>
                 </div>
               )}
-              {!gstr3b && !loading && (
-                <p className="text-slate-500 text-sm mt-2">Compute GSTR-3B to see your liability</p>
-              )}
+              {!gstr3b && <p className="text-slate-500 text-sm mt-2">Compute GSTR-3B to see your liability</p>}
             </div>
             <div className="flex flex-col gap-2">
               <Link href="/returns/gstr3b">
@@ -143,7 +148,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Filing deadlines */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
           { label: "GSTR-1 (Outward Sales)", due: gstr1Due, desc: "11th of next month", href: "/returns/gstr1" },
@@ -164,41 +168,12 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Activity cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          {
-            label: "Sales Invoices",
-            value: "—",
-            icon: ReceiptText,
-            color: "text-blue-400",
-            bg: "bg-blue-950/40",
-            href: "/invoices/outward",
-          },
-          {
-            label: "Purchase Invoices",
-            value: "—",
-            icon: FileText,
-            color: "text-purple-400",
-            bg: "bg-purple-950/40",
-            href: "/invoices/inward",
-          },
-          {
-            label: "Matched (GSTR-2B)",
-            value: recon ? String(recon.matched) : "—",
-            icon: CheckCircle2,
-            color: "text-green-400",
-            bg: "bg-green-950/40",
-            href: "/reconciliation/gst",
-          },
-          {
-            label: "ITC at Risk",
-            value: recon ? String(recon.missing_in_books + recon.amount_mismatch) + " invoices" : "—",
-            icon: AlertTriangle,
-            color: "text-red-400",
-            bg: "bg-red-950/40",
-            href: "/reconciliation/gst",
-          },
+          { label: "Sales Invoices", value: "—", icon: ReceiptText, color: "text-blue-400", bg: "bg-blue-950/40", href: "/invoices/outward" },
+          { label: "Purchase Invoices", value: "—", icon: FileText, color: "text-purple-400", bg: "bg-purple-950/40", href: "/invoices/inward" },
+          { label: "Matched (GSTR-2B)", value: recon ? String(recon.matched) : "—", icon: CheckCircle2, color: "text-green-400", bg: "bg-green-950/40", href: "/reconciliation/gst" },
+          { label: "ITC at Risk", value: recon ? String(recon.missing_in_books + recon.amount_mismatch) + " invoices" : "—", icon: AlertTriangle, color: "text-red-400", bg: "bg-red-950/40", href: "/reconciliation/gst" },
         ].map((stat) => (
           <Link key={stat.label} href={stat.href}>
             <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors cursor-pointer">
@@ -214,7 +189,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Quick actions */}
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader className="pb-3">
           <CardTitle className="text-white text-base">Quick actions for {PERIOD}</CardTitle>

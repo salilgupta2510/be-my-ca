@@ -1,13 +1,16 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, RefreshCw, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 const PERIOD = "2025-01";
+const CACHE_KEY = `gstr1:${PERIOD}`;
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -18,35 +21,18 @@ function authH(json = false) {
 function fmt(n: string | number) { return "₹" + Number(n).toLocaleString("en-IN"); }
 
 interface GSTR1Section {
-  type: string;
-  count: number;
-  taxable_value: number;
-  igst: number;
-  cgst: number;
-  sgst: number;
-  cess: number;
+  type: string; count: number; taxable_value: number;
+  igst: number; cgst: number; sgst: number; cess: number;
 }
 
 interface GSTR1Return {
-  id: string;
-  period: string;
-  status: string;
-  arn: string | null;
-  total_tax_payable: string;
+  id: string; period: string; status: string; arn: string | null; total_tax_payable: string;
   computed_payload: {
-    b2b: GSTR1Section[];
-    b2c_large: GSTR1Section[];
-    b2c_small: GSTR1Section[];
-    exports: GSTR1Section[];
-    credit_notes: GSTR1Section[];
+    b2b: GSTR1Section[]; b2c_large: GSTR1Section[]; b2c_small: GSTR1Section[];
+    exports: GSTR1Section[]; credit_notes: GSTR1Section[];
     summary: {
-      total_taxable_value: number;
-      total_igst: number;
-      total_cgst: number;
-      total_sgst: number;
-      total_cess: number;
-      total_tax: number;
-      invoice_count: number;
+      total_taxable_value: number; total_igst: number; total_cgst: number;
+      total_sgst: number; total_cess: number; total_tax: number; invoice_count: number;
     };
   } | null;
 }
@@ -66,19 +52,67 @@ const STATUS_COLORS: Record<string, string> = {
   filing_failed: "border-red-600 text-red-400",
 };
 
-export default function GSTR1Page() {
-  const [ret, setRet] = useState<GSTR1Return | null>(null);
-  const [computing, setComputing] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+function PageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-28 bg-slate-800" />
+          <Skeleton className="h-4 w-56 bg-slate-800" />
+        </div>
+        <Skeleton className="h-10 w-44 bg-slate-800" />
+      </div>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="bg-slate-900 border-slate-800">
+            <CardContent className="p-4 space-y-2">
+              <Skeleton className="h-6 w-24 bg-slate-800" />
+              <Skeleton className="h-3 w-20 bg-slate-800" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {[...Array(3)].map((_, i) => (
+        <Card key={i} className="bg-slate-900 border-slate-800">
+          <CardHeader className="pb-3"><Skeleton className="h-4 w-40 bg-slate-800" /></CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-slate-800">
+              {[...Array(2)].map((_, j) => (
+                <div key={j} className="flex gap-4 px-4 py-2">
+                  {[...Array(6)].map((__, k) => <Skeleton key={k} className="h-4 flex-1 bg-slate-800" />)}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
-  async function loadExisting() {
-    const res = await fetch(`${API}/returns/gstr1?period=${PERIOD}`, { headers: authH() });
-    if (res.ok) {
-      const data = await res.json();
-      setRet(data);
+export default function GSTR1Page() {
+  const cached = cacheGet<GSTR1Return | "none">(CACHE_KEY);
+  const [ret, setRet] = useState<GSTR1Return | null>(
+    cached && cached !== "none" ? cached : null
+  );
+  const [loading, setLoading] = useState(!cached);
+  const [computing, setComputing] = useState(false);
+
+  useEffect(() => {
+    async function load(silent: boolean) {
+      if (!silent) setLoading(true);
+      const res = await fetch(`${API}/returns/gstr1?period=${PERIOD}`, { headers: authH() });
+      if (res.ok) {
+        const data = await res.json();
+        setRet(data);
+        cacheSet(CACHE_KEY, data);
+      } else {
+        cacheSet(CACHE_KEY, "none");
+      }
+      setLoading(false);
     }
-    setLoaded(true);
-  }
+    load(!!cached);
+  }, []);
 
   async function compute() {
     setComputing(true);
@@ -89,6 +123,7 @@ export default function GSTR1Page() {
       if (!res.ok) throw new Error((await res.json()).detail ?? "Compute failed");
       const data = await res.json();
       setRet(data);
+      cacheSet(CACHE_KEY, data);
       toast.success("GSTR-1 computed");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Compute failed");
@@ -97,8 +132,7 @@ export default function GSTR1Page() {
     }
   }
 
-  // Load existing on mount
-  if (!loaded) { loadExisting(); }
+  if (loading) return <PageSkeleton />;
 
   const summary = ret?.computed_payload?.summary;
   const sections = ret?.computed_payload

@@ -1,13 +1,16 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, RefreshCw, CheckCircle, AlertTriangle, FileCheck } from "lucide-react";
 import { toast } from "sonner";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 const PERIOD = "2025-01";
+const CACHE_KEY = `gstr3b:${PERIOD}`;
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -25,15 +28,9 @@ interface GSTR3BReturn {
   total_tax_payable: string;
   itc_claimed: string;
   computed_payload: {
-    outward_tax_liability: {
-      igst: number; cgst: number; sgst: number; cess: number; total: number;
-    };
-    itc_available: {
-      igst: number; cgst: number; sgst: number; cess: number; total: number;
-    };
-    net_tax_payable: {
-      igst: number; cgst: number; sgst: number; cess: number; total: number;
-    };
+    outward_tax_liability: { igst: number; cgst: number; sgst: number; cess: number; total: number; };
+    itc_available: { igst: number; cgst: number; sgst: number; cess: number; total: number; };
+    net_tax_payable: { igst: number; cgst: number; sgst: number; cess: number; total: number; };
     reconciliation_done: boolean;
     invoice_count: number;
   } | null;
@@ -46,18 +43,61 @@ const STATUS_COLORS: Record<string, string> = {
   filing_failed: "border-red-600 text-red-400",
 };
 
+function PageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-32 bg-slate-800" />
+          <Skeleton className="h-4 w-56 bg-slate-800" />
+        </div>
+        <Skeleton className="h-10 w-44 bg-slate-800" />
+      </div>
+      {[1, 2, 3].map(i => (
+        <Card key={i} className="bg-slate-900 border-slate-800">
+          <CardHeader className="pb-2"><Skeleton className="h-4 w-40 bg-slate-800" /></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-4">
+              {[...Array(4)].map((_, j) => (
+                <div key={j} className="space-y-1">
+                  <Skeleton className="h-3 w-10 bg-slate-800" />
+                  <Skeleton className="h-5 w-20 bg-slate-800" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+      <Skeleton className="h-32 w-full bg-slate-800 rounded-xl" />
+    </div>
+  );
+}
+
 export default function GSTR3BPage() {
-  const [ret, setRet] = useState<GSTR3BReturn | null>(null);
+  const cached = cacheGet<GSTR3BReturn | "none">(CACHE_KEY);
+  const [ret, setRet] = useState<GSTR3BReturn | null>(
+    cached && cached !== "none" ? cached : null
+  );
+  const [loading, setLoading] = useState(!cached);
   const [computing, setComputing] = useState(false);
   const [filing, setFiling] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
-  async function loadExisting() {
-    const res = await fetch(`${API}/returns/gstr3b?period=${PERIOD}`, { headers: authH() });
-    if (res.ok) setRet(await res.json());
-    setLoaded(true);
-  }
+  useEffect(() => {
+    async function load(silent: boolean) {
+      if (!silent) setLoading(true);
+      const res = await fetch(`${API}/returns/gstr3b?period=${PERIOD}`, { headers: authH() });
+      if (res.ok) {
+        const data = await res.json();
+        setRet(data);
+        cacheSet(CACHE_KEY, data);
+      } else {
+        cacheSet(CACHE_KEY, "none");
+      }
+      setLoading(false);
+    }
+    load(!!cached);
+  }, []);
 
   async function compute() {
     setComputing(true);
@@ -66,7 +106,9 @@ export default function GSTR3BPage() {
         method: "POST", headers: authH(true),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "Compute failed");
-      setRet(await res.json());
+      const data = await res.json();
+      setRet(data);
+      cacheSet(CACHE_KEY, data);
       toast.success("GSTR-3B computed");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Compute failed");
@@ -84,7 +126,9 @@ export default function GSTR3BPage() {
         method: "POST", headers: authH(true),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "Filing failed");
-      setRet(await res.json());
+      const data = await res.json();
+      setRet(data);
+      cacheSet(CACHE_KEY, data);
       toast.success("Return filed successfully!");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Filing failed");
@@ -93,7 +137,7 @@ export default function GSTR3BPage() {
     }
   }
 
-  if (!loaded) { loadExisting(); }
+  if (loading) return <PageSkeleton />;
 
   const p = ret?.computed_payload;
   const canFile = ret && ret.status !== "filed";
@@ -127,7 +171,6 @@ export default function GSTR3BPage() {
         </div>
       </div>
 
-      {/* Filing confirm */}
       {showConfirm && (
         <Card className="bg-amber-950/30 border-amber-700">
           <CardContent className="p-4">
@@ -151,7 +194,6 @@ export default function GSTR3BPage() {
         </Card>
       )}
 
-      {/* ARN success */}
       {ret?.arn && (
         <Card className="bg-green-950/30 border-green-800">
           <CardContent className="p-4 flex items-center gap-3">
@@ -164,7 +206,6 @@ export default function GSTR3BPage() {
         </Card>
       )}
 
-      {/* Recon warning */}
       {p && !p.reconciliation_done && (
         <Card className="bg-amber-950/20 border-amber-800/50">
           <CardContent className="p-4 flex items-center gap-3">
@@ -176,7 +217,6 @@ export default function GSTR3BPage() {
         </Card>
       )}
 
-      {/* Tax breakdown */}
       {p && (
         <div className="space-y-4">
           {[
@@ -206,7 +246,6 @@ export default function GSTR3BPage() {
             </Card>
           ))}
 
-          {/* Net payable hero */}
           <Card className="bg-blue-950/30 border-blue-800">
             <CardContent className="p-6 text-center">
               <p className="text-slate-400 text-sm">Total GST to pay</p>

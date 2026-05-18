@@ -1,14 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search, RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 const PERIOD = "2025-01";
+const CACHE_KEY = `reconciliation:${PERIOD}`;
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -29,44 +32,63 @@ const STATUS_CONFIG: Record<Status, { label: string; color: string; icon: React.
 };
 
 interface ReconRow {
-  id: string;
-  supplier_name: string;
-  supplier_gstin: string | null;
-  invoice_number: string;
-  invoice_date: string;
-  taxable_value: string;
-  igst: string;
-  cgst: string;
-  sgst: string;
-  status: Status;
-  match_confidence: number | null;
-  ims_action: string | null;
+  id: string; supplier_name: string; supplier_gstin: string | null;
+  invoice_number: string; invoice_date: string; taxable_value: string;
+  igst: string; cgst: string; sgst: string; status: Status;
+  match_confidence: number | null; ims_action: string | null;
+}
+
+function TableSkeleton() {
+  return (
+    <div className="divide-y divide-slate-800">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="flex gap-4 px-4 py-3">
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-40 bg-slate-800" />
+            <Skeleton className="h-3 w-32 bg-slate-800" />
+          </div>
+          <Skeleton className="h-4 w-24 bg-slate-800 self-center" />
+          <Skeleton className="h-4 w-20 bg-slate-800 self-center" />
+          <Skeleton className="h-5 w-28 bg-slate-800 rounded-full self-center" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function GSTReconciliationPage() {
-  const [rows, setRows] = useState<ReconRow[]>([]);
+  const cached = cacheGet<ReconRow[]>(CACHE_KEY);
+  const [rows, setRows] = useState<ReconRow[]>(cached ?? []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cached);
   const [running, setRunning] = useState(false);
 
-  async function load() {
-    setLoading(true);
-    const res = await fetch(`${API}/gst/reconciliation/results?period=${PERIOD}`, { headers: authH() });
-    if (res.ok) setRows(await res.json());
-    setLoading(false);
-  }
-
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    async function load(silent: boolean) {
+      if (!silent) setLoading(true);
+      const res = await fetch(`${API}/gst/reconciliation/results?period=${PERIOD}`, { headers: authH() });
+      if (res.ok) {
+        const data = await res.json();
+        setRows(data);
+        cacheSet(CACHE_KEY, data);
+      }
+      setLoading(false);
+    }
+    load(!!cached);
+  }, []);
 
   async function runRecon() {
     setRunning(true);
     try {
-      const res = await fetch(`${API}/gst/reconciliation/run?period=${PERIOD}`, {
-        method: "POST", headers: authH(true),
-      });
+      const res = await fetch(`${API}/gst/reconciliation/run?period=${PERIOD}`, { method: "POST", headers: authH(true) });
       if (!res.ok) throw new Error((await res.json()).detail ?? "Reconciliation failed");
-      await load();
+      const res2 = await fetch(`${API}/gst/reconciliation/results?period=${PERIOD}`, { headers: authH() });
+      if (res2.ok) {
+        const data = await res2.json();
+        setRows(data);
+        cacheSet(CACHE_KEY, data);
+      }
       toast.success("Reconciliation complete");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -76,29 +98,22 @@ export default function GSTReconciliationPage() {
   }
 
   async function imsAction(id: string, action: "accept" | "reject" | "pending") {
-    const res = await fetch(`${API}/gst/ims/${id}`, {
-      method: "PUT", headers: authH(true),
-      body: JSON.stringify({ action }),
-    });
+    const res = await fetch(`${API}/gst/ims/${id}`, { method: "PUT", headers: authH(true), body: JSON.stringify({ action }) });
     if (res.ok) {
-      setRows(r => r.map(row => row.id === id ? { ...row, ims_action: action } : row));
+      const updated = rows.map(row => row.id === id ? { ...row, ims_action: action } : row);
+      setRows(updated);
+      cacheSet(CACHE_KEY, updated);
       toast.success(`Invoice ${action}ed`);
-    } else {
-      toast.error("Action failed");
-    }
+    } else toast.error("Action failed");
   }
 
   const filtered = rows.filter(row => {
-    const matchSearch = !search ||
-      row.supplier_name.toLowerCase().includes(search.toLowerCase()) ||
-      (row.supplier_gstin ?? "").includes(search);
+    const matchSearch = !search || row.supplier_name.toLowerCase().includes(search.toLowerCase()) || (row.supplier_gstin ?? "").includes(search);
     const matchStatus = statusFilter === "all" || row.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const counts = Object.fromEntries(
-    Object.keys(STATUS_CONFIG).map(s => [s, rows.filter(r => r.status === s).length])
-  );
+  const counts = Object.fromEntries(Object.keys(STATUS_CONFIG).map(s => [s, rows.filter(r => r.status === s).length]));
 
   return (
     <div className="space-y-6">
@@ -108,49 +123,48 @@ export default function GSTReconciliationPage() {
           <p className="text-slate-400 text-sm mt-0.5">Your purchases vs what suppliers filed · Period: {PERIOD}</p>
         </div>
         <Button onClick={runRecon} disabled={running} className="bg-blue-600 hover:bg-blue-700">
-          {running
-            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running…</>
-            : <><RefreshCw className="w-4 h-4 mr-2" /> Run Reconciliation</>
-          }
+          {running ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running…</> : <><RefreshCw className="w-4 h-4 mr-2" /> Run Reconciliation</>}
         </Button>
       </div>
 
-      {/* Status filter cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {(Object.entries(STATUS_CONFIG) as [Status, typeof STATUS_CONFIG[Status]][]).map(([status, config]) => (
-          <Card
-            key={status}
-            className={`bg-slate-900 border-slate-800 cursor-pointer transition-all hover:border-slate-600 ${statusFilter === status ? "ring-2 ring-blue-500" : ""}`}
-            onClick={() => setStatusFilter(statusFilter === status ? "all" : status)}
-          >
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-white">{counts[status] ?? 0}</p>
-              <p className={`text-xs mt-1 ${config.color.split(" ")[1]}`}>{config.label}</p>
-            </CardContent>
-          </Card>
+          loading ? (
+            <Card key={status} className="bg-slate-900 border-slate-800">
+              <CardContent className="p-4 text-center space-y-2">
+                <Skeleton className="h-7 w-10 bg-slate-800 mx-auto" />
+                <Skeleton className="h-3 w-20 bg-slate-800 mx-auto" />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card
+              key={status}
+              className={`bg-slate-900 border-slate-800 cursor-pointer transition-all hover:border-slate-600 ${statusFilter === status ? "ring-2 ring-blue-500" : ""}`}
+              onClick={() => setStatusFilter(statusFilter === status ? "all" : status)}
+            >
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-white">{counts[status] ?? 0}</p>
+                <p className={`text-xs mt-1 ${config.color.split(" ")[1]}`}>{config.label}</p>
+              </CardContent>
+            </Card>
+          )
         ))}
       </div>
 
       <div className="relative">
         <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
-        <Input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search supplier or GSTIN…"
-          className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-        />
+        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search supplier or GSTIN…"
+          className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500" />
       </div>
 
       <Card className="bg-slate-900 border-slate-800">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-slate-400">Loading…</div>
+            <TableSkeleton />
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-slate-400 text-sm">
-                {rows.length === 0
-                  ? "No reconciliation data. Add purchase invoices and run reconciliation."
-                  : "No rows match filter."}
+                {rows.length === 0 ? "No reconciliation data. Add purchase invoices and run reconciliation." : "No rows match filter."}
               </p>
             </div>
           ) : (
@@ -180,8 +194,7 @@ export default function GSTReconciliationPage() {
                         <td className="px-4 py-3 text-white text-sm">{fmt(tax)}</td>
                         <td className="px-4 py-3">
                           <Badge variant="outline" className={`text-xs gap-1 ${cfg.color}`}>
-                            <Icon className="w-3 h-3" />
-                            {cfg.label}
+                            <Icon className="w-3 h-3" />{cfg.label}
                             {row.match_confidence != null && ` (${row.match_confidence}%)`}
                           </Badge>
                         </td>
@@ -197,9 +210,7 @@ export default function GSTReconciliationPage() {
                             <Badge className={`text-xs ${row.ims_action === "accept" ? "bg-green-900 text-green-300" : "bg-red-900 text-red-300"}`}>
                               {row.ims_action}ed
                             </Badge>
-                          ) : (
-                            <span className="text-slate-600 text-xs">—</span>
-                          )}
+                          ) : <span className="text-slate-600 text-xs">—</span>}
                         </td>
                       </tr>
                     );

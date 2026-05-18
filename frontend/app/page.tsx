@@ -1,13 +1,36 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Upload, FileText, ShieldCheck, Clock, Zap, BarChart3, Menu, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Upload, FileText, ShieldCheck, Clock, Zap, BarChart3, Menu, X, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import api from "@/lib/api";
 
 export default function LandingPage() {
   const [authed, setAuthed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistName, setWaitlistName] = useState("");
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [waitlistDone, setWaitlistDone] = useState(false);
+
+  async function handleWaitlist(e: React.FormEvent) {
+    e.preventDefault();
+    setWaitlistLoading(true);
+    try {
+      const { data } = await api.post("/waitlist", { email: waitlistEmail, name: waitlistName || undefined });
+      setWaitlistDone(true);
+      if (data.already_registered) {
+        toast.info("You're already on our list!");
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setWaitlistLoading(false);
+    }
+  }
 
   useEffect(() => {
     setAuthed(!!localStorage.getItem("bemyca_token"));
@@ -315,6 +338,63 @@ export default function LandingPage() {
               </>
             )}
           </div>
+        </div>
+      </section>
+
+      {/* Waitlist */}
+      <section className="max-w-2xl mx-auto px-4 py-24">
+        <div className="bg-gradient-to-br from-slate-900 to-blue-950/40 border border-slate-700 rounded-2xl p-8 sm:p-12 text-center">
+          <div className="inline-flex items-center gap-2 bg-blue-950 text-blue-300 border border-blue-800 rounded-full px-4 py-1.5 text-sm mb-6">
+            <Sparkles className="w-3.5 h-3.5" />
+            Limited early access
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+            Want early access?
+          </h2>
+          <p className="text-slate-400 mb-8 leading-relaxed">
+            We're onboarding businesses one by one to ensure quality. Drop your email — we'll reach out personally when your spot is ready.
+          </p>
+
+          {waitlistDone ? (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <div className="w-14 h-14 bg-green-950 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-7 h-7 text-green-400" />
+              </div>
+              <p className="text-white font-semibold text-lg">You're on the list!</p>
+              <p className="text-slate-400 text-sm">We'll email you when your spot opens up. Usually within a few days.</p>
+            </div>
+          ) : (
+            <form onSubmit={handleWaitlist} className="flex flex-col gap-3">
+              <Input
+                type="text"
+                placeholder="Your name (optional)"
+                value={waitlistName}
+                onChange={(e) => setWaitlistName(e.target.value)}
+                className="bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500 h-12 text-center"
+              />
+              <Input
+                type="email"
+                placeholder="your@email.com"
+                value={waitlistEmail}
+                onChange={(e) => setWaitlistEmail(e.target.value)}
+                required
+                className="bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500 h-12 text-center"
+              />
+              <Button
+                type="submit"
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 h-12 text-base mt-1"
+                disabled={waitlistLoading}
+              >
+                {waitlistLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Joining...</>
+                ) : (
+                  <>Request early access <ArrowRight className="w-4 h-4 ml-2" /></>
+                )}
+              </Button>
+              <p className="text-slate-600 text-xs mt-1">No spam. No password required. Just an email when you're up.</p>
+            </form>
+          )}
         </div>
       </section>
 
