@@ -60,8 +60,7 @@ export default function LandingPage() {
                 <Link href="/dashboard"><Button className="bg-blue-600 hover:bg-blue-700 w-full">Go to Dashboard</Button></Link>
               ) : (
                 <>
-                  <Link href="/login"><Button variant="outline" className="border-slate-700 text-slate-300 w-full">Sign in</Button></Link>
-                  <Link href="/register"><Button className="bg-blue-600 hover:bg-blue-700 w-full">Get Started Free</Button></Link>
+                  <Link href="/login"><Button className="bg-blue-600 hover:bg-blue-700 w-full">Sign In</Button></Link>
                 </>
               )}
             </div>
