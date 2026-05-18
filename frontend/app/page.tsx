@@ -37,8 +37,8 @@ export default function LandingPage() {
                 <Link href="/login">
                   <Button variant="ghost" className="text-slate-300 hover:text-white text-sm">Sign in</Button>
                 </Link>
-                <Link href="/register">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-sm">Get Started Free</Button>
+                <Link href="/login">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-sm">Sign In</Button>
                 </Link>
               </>
             )}
@@ -102,9 +102,9 @@ export default function LandingPage() {
               </Link>
             ) : (
               <>
-                <Link href="/register">
+                <Link href="/login">
                   <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
-                    Start filing free <ArrowRight className="w-5 h-5 ml-2" />
+                    Sign in <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
                 <Link href="#how-it-works">
@@ -305,9 +305,9 @@ export default function LandingPage() {
               </Link>
             ) : (
               <>
-                <Link href="/register">
+                <Link href="/login">
                   <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
-                    Create free account <ArrowRight className="w-5 h-5 ml-2" />
+                    Sign in <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
                 <Link href="/pricing">
@@ -341,7 +341,7 @@ export default function LandingPage() {
               <div>
                 <p className="text-white font-medium mb-3">Account</p>
                 <div className="flex flex-col gap-2 text-slate-500">
-                  <Link href="/register" className="hover:text-white transition-colors">Sign up free</Link>
+                  <Link href="/login" className="hover:text-white transition-colors">Sign in</Link>
                   <Link href="/login" className="hover:text-white transition-colors">Sign in</Link>
                   <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
                 </div>

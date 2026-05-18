@@ -19,7 +19,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await api.post("/api/v1/auth/login", { email, password });
+      const { data } = await api.post("/auth/login", { email, password });
       localStorage.setItem("bemyca_token", data.access_token);
       localStorage.setItem("bemyca_user", JSON.stringify({ id: data.user_id, role: data.role }));
       if (!data.onboarding_complete) {
@@ -77,10 +77,7 @@ export default function LoginPage() {
               </Button>
             </form>
             <p className="text-center text-slate-400 text-sm mt-4">
-              No account?{" "}
-              <Link href="/register" className="text-blue-400 hover:underline">
-                Register free
-              </Link>
+              Access by invitation only.
             </p>
           </CardContent>
         </Card>
