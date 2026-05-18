@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: bemyca-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: ap-south-1
+      - key: AWS_TEXTRACT_BUCKET
+        sync: false
+      - key: GSP_BASE_URL
+        value: https://api.masters-india.com
+      - key: GSP_USERNAME
+        sync: false
+      - key: GSP_PASSWORD
+        sync: false
+      - key: GSP_CLIENT_ID
+        sync: false
+      - key: GSP_CLIENT_SECRET
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

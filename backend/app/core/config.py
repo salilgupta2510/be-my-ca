@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: str = "mock"
     RAZORPAY_KEY_SECRET: str = "mock"
 
+    # CORS — comma-separated list of allowed origins
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002"
+
     class Config:
         env_file = ".env"
         extra = "ignore"
