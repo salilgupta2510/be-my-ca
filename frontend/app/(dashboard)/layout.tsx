@@ -1,12 +1,11 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown, Home } from "lucide-react";
+import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
-  { href: "/", label: "Home", icon: Home },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   {
     label: "Invoices", icon: FileText, children: [

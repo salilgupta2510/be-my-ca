@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import Link from "next/link";
 
@@ -73,7 +74,7 @@ export default function LoginPage() {
                 />
               </div>
               <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
-                {loading ? "Signing in..." : "Sign in"}
+                {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Signing in...</> : "Sign in"}
               </Button>
             </form>
             <p className="text-center text-slate-400 text-sm mt-4">

@@ -33,14 +33,9 @@ export default function LandingPage() {
                 <Button className="bg-blue-600 hover:bg-blue-700 text-sm">Go to Dashboard <ArrowRight className="w-4 h-4 ml-1" /></Button>
               </Link>
             ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" className="text-slate-300 hover:text-white text-sm">Sign in</Button>
-                </Link>
-                <Link href="/login">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-sm">Sign In</Button>
-                </Link>
-              </>
+              <Link href="/login">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-sm">Sign In</Button>
+              </Link>
             )}
           </div>
 
@@ -111,6 +106,9 @@ export default function LandingPage() {
                     See how it works
                   </Button>
                 </Link>
+                <p className="w-full text-center text-slate-500 text-sm mt-2">
+                  Currently invite-only — we are not accepting new sign-ups at this time.
+                </p>
               </>
             )}
           </div>
@@ -340,7 +338,6 @@ export default function LandingPage() {
               <div>
                 <p className="text-white font-medium mb-3">Account</p>
                 <div className="flex flex-col gap-2 text-slate-500">
-                  <Link href="/login" className="hover:text-white transition-colors">Sign in</Link>
                   <Link href="/login" className="hover:text-white transition-colors">Sign in</Link>
                   <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
                 </div>
