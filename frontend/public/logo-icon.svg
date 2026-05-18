@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <rect width="64" height="64" rx="14" fill="url(#shine)"/>
+
+  <!-- Document body -->
+  <rect x="14" y="10" width="30" height="38" rx="3" fill="white" fill-opacity="0.12"/>
+  <rect x="14" y="10" width="30" height="38" rx="3" stroke="white" stroke-opacity="0.3" stroke-width="1"/>
+
+  <!-- Document lines (ruled paper effect) -->
+  <line x1="19" y1="22" x2="39" y2="22" stroke="white" stroke-opacity="0.25" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="19" y1="27" x2="39" y2="27" stroke="white" stroke-opacity="0.25" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="19" y1="32" x2="33" y2="32" stroke="white" stroke-opacity="0.25" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- Rupee ₹ symbol — main hero element -->
+  <!-- Circle badge behind rupee -->
+  <circle cx="42" cy="44" r="13" fill="#1e40af"/>
+  <circle cx="42" cy="44" r="13" fill="#3b82f6" fill-opacity="0.25"/>
+  <circle cx="42" cy="44" r="12.5" stroke="#60a5fa" stroke-width="1" stroke-opacity="0.6"/>
+
+  <!-- ₹ glyph drawn as paths -->
+  <!-- Top horizontal bar -->
+  <line x1="36.5" y1="38.5" x2="47.5" y2="38.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Second horizontal bar -->
+  <line x1="36.5" y1="42" x2="47.5" y2="42" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Vertical stem -->
+  <line x1="38.5" y1="38.5" x2="38.5" y2="50.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Diagonal slash through middle -->
+  <line x1="47" y1="42" x2="38" y2="50.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- PAN serif bump on B -->
+  <path d="M38.5 38.5 Q46 38.5 46 40.25 Q46 42 38.5 42" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
