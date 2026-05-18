@@ -1,16 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Upload, FileText, ShieldCheck, Clock, Zap, BarChart3, Menu, X, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Upload, FileText, ShieldCheck, Clock, Zap, BarChart3, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import PublicNav from "@/components/public-nav";
 
 export default function LandingPage() {
   const [authed, setAuthed] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistName, setWaitlistName] = useState("");
   const [waitlistLoading, setWaitlistLoading] = useState(false);
@@ -38,53 +38,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <img src="/logo.svg" alt="BeMyCa" className="h-9 w-auto" />
-
-          <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
-            <Link href="/" className="hover:text-white transition-colors">Home</Link>
-            <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-          </div>
-
-          <div className="hidden md:flex items-center gap-3">
-            {authed ? (
-              <Link href="/dashboard">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-sm">Go to Dashboard <ArrowRight className="w-4 h-4 ml-1" /></Button>
-              </Link>
-            ) : (
-              <Link href="/login">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-sm">Sign In</Button>
-              </Link>
-            )}
-          </div>
-
-          <button className="md:hidden text-slate-400 hover:text-white" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-
-        {menuOpen && (
-          <div className="md:hidden border-t border-slate-800 bg-slate-950 px-4 py-4 flex flex-col gap-4 text-sm">
-            <Link href="/" className="text-slate-400 hover:text-white" onClick={() => setMenuOpen(false)}>Home</Link>
-            <a href="#how-it-works" className="text-slate-400 hover:text-white" onClick={() => setMenuOpen(false)}>How it works</a>
-            <a href="#features" className="text-slate-400 hover:text-white" onClick={() => setMenuOpen(false)}>Features</a>
-            <Link href="/pricing" className="text-slate-400 hover:text-white" onClick={() => setMenuOpen(false)}>Pricing</Link>
-            <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-              {authed ? (
-                <Link href="/dashboard"><Button className="bg-blue-600 hover:bg-blue-700 w-full">Go to Dashboard</Button></Link>
-              ) : (
-                <>
-                  <Link href="/login"><Button className="bg-blue-600 hover:bg-blue-700 w-full">Sign In</Button></Link>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </nav>
+      <PublicNav activePage="home" />
 
       {/* Hero */}
       <section className="relative overflow-hidden">
@@ -342,7 +296,7 @@ export default function LandingPage() {
       </section>
 
       {/* Waitlist */}
-      <section className="max-w-2xl mx-auto px-4 py-24">
+      <section id="waitlist" className="max-w-2xl mx-auto px-4 py-24">
         <div className="bg-gradient-to-br from-slate-900 to-blue-950/40 border border-slate-700 rounded-2xl p-8 sm:p-12 text-center">
           <div className="inline-flex items-center gap-2 bg-blue-950 text-blue-300 border border-blue-800 rounded-full px-4 py-1.5 text-sm mb-6">
             <Sparkles className="w-3.5 h-3.5" />

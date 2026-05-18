@@ -1,17 +1,17 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, X, ArrowRight } from "lucide-react";
+import { CheckCircle2, X, ArrowRight, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import PublicNav from "@/components/public-nav";
 
 const plans = [
   {
     name: "Starter",
     price: { monthly: 0, annual: 0 },
     tagline: "For solopreneurs just getting started",
-    cta: "Start free",
-    ctaHref: "/register",
+    cta: "Request access",
     highlight: false,
     features: [
       { text: "1 business / GSTIN", included: true },
@@ -30,8 +30,7 @@ const plans = [
     name: "Pro",
     price: { monthly: 499, annual: 399 },
     tagline: "For active traders and service businesses",
-    cta: "Start 14-day trial",
-    ctaHref: "/register",
+    cta: "Request access",
     highlight: true,
     badge: "Most popular",
     features: [
@@ -51,8 +50,7 @@ const plans = [
     name: "Business",
     price: { monthly: 1499, annual: 1199 },
     tagline: "For multi-GSTIN businesses and growing teams",
-    cta: "Start 14-day trial",
-    ctaHref: "/register",
+    cta: "Request access",
     highlight: false,
     features: [
       { text: "Up to 5 businesses / GSTINs", included: true },
@@ -98,43 +96,19 @@ const faqs = [
 
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false);
-  const [authed, setAuthed] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  useEffect(() => {
-    setAuthed(!!localStorage.getItem("bemyca_token"));
-  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/">
-            <img src="/logo.svg" alt="BeMyCa" className="h-9 w-auto" />
-          </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
-            <Link href="/" className="hover:text-white transition-colors">Home</Link>
-            <Link href="/pricing" className="text-white transition-colors">Pricing</Link>
-          </div>
-          <div className="flex items-center gap-3">
-            {authed ? (
-              <Link href="/dashboard">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-sm">Dashboard</Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" className="text-slate-300 hover:text-white text-sm">Sign in</Button>
-                </Link>
-                <Link href="/register">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-sm">Get started</Button>
-                </Link>
-              </>
-            )}
-          </div>
+      <PublicNav activePage="pricing" />
+
+      {/* Invite-only banner */}
+      <div className="bg-blue-950/60 border-b border-blue-900">
+        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-center gap-2 text-sm text-blue-300">
+          <Lock className="w-3.5 h-3.5 flex-shrink-0" />
+          Currently invite-only — <Link href="/login" className="underline hover:text-white">sign in if you have access</Link>, or <a href="/#waitlist" className="underline hover:text-white">join the waitlist</a>
         </div>
-      </nav>
+      </div>
 
       {/* Header */}
       <div className="max-w-3xl mx-auto px-4 pt-20 pb-12 text-center">
@@ -143,7 +117,6 @@ export default function PricingPage() {
           No hidden fees. No per-return charges. File as many times as you need.
         </p>
 
-        {/* Toggle */}
         <div className="inline-flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-full p-1">
           <button
             onClick={() => setAnnual(false)}
@@ -213,7 +186,7 @@ export default function PricingPage() {
                 )}
               </div>
 
-              <Link href={plan.ctaHref}>
+              <Link href="/#waitlist">
                 <Button
                   className={`w-full mb-8 ${
                     plan.highlight
@@ -241,7 +214,6 @@ export default function PricingPage() {
           ))}
         </div>
 
-        {/* Footnote */}
         <p className="text-center text-slate-500 text-sm mt-8">
           All plans include: 30-day money-back guarantee · TLS encryption · Unlimited data retention
         </p>
@@ -257,9 +229,7 @@ export default function PricingPage() {
                 <tr className="border-b border-slate-800">
                   <th className="text-left py-3 pr-8 text-slate-400 font-medium w-1/2">Feature</th>
                   {plans.map((p) => (
-                    <th key={p.name} className="py-3 px-4 text-center text-white font-semibold">
-                      {p.name}
-                    </th>
+                    <th key={p.name} className="py-3 px-4 text-center text-white font-semibold">{p.name}</th>
                   ))}
                 </tr>
               </thead>
@@ -327,13 +297,20 @@ export default function PricingPage() {
       {/* CTA */}
       <section className="bg-gradient-to-r from-blue-950 to-slate-900 border-t border-blue-900">
         <div className="max-w-3xl mx-auto px-4 py-20 text-center">
-          <h2 className="text-3xl font-bold mb-4">Start free today</h2>
-          <p className="text-slate-400 mb-8">No credit card required. Upgrade when you need more.</p>
-          <Link href="/register">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
-              Create free account <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
+          <h2 className="text-3xl font-bold mb-4">Already have access?</h2>
+          <p className="text-slate-400 mb-8">Sign in to your account and start filing.</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/login">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
+                Sign In <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+            <Link href="/#waitlist">
+              <Button size="lg" variant="outline" className="border-blue-700 text-slate-300 hover:text-white text-base px-8 py-6">
+                Join waitlist
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
