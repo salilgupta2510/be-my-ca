@@ -8,8 +8,6 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-      - key: REDIS_URL
-        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: ANTHROPIC_API_KEY
