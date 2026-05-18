@@ -2,7 +2,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import DeclarativeBase
 from app.core.config import settings
 
-DATABASE_URL = (
+import re as _re
+DATABASE_URL = _re.sub(
+    r"[&?]channel_binding=[^&]*", "",
     settings.DATABASE_URL
     .replace("postgresql://", "postgresql+asyncpg://")
     .replace("sslmode=require", "ssl=require")
