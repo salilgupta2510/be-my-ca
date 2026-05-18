@@ -20,12 +20,6 @@ class Settings(BaseSettings):
     # Anthropic
     ANTHROPIC_API_KEY: str = "mock"
 
-    # AWS
-    AWS_ACCESS_KEY_ID: str = "mock"
-    AWS_SECRET_ACCESS_KEY: str = "mock"
-    AWS_REGION: str = "ap-south-1"
-    AWS_TEXTRACT_BUCKET: str = "bemyca-documents-dev"
-
     # GSP
     GSP_BASE_URL: str = "https://api.masters-india.com"
     GSP_USERNAME: str = "mock"

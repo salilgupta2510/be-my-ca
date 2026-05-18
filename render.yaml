@@ -14,14 +14,6 @@ services:
         generateValue: true
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: AWS_ACCESS_KEY_ID
-        sync: false
-      - key: AWS_SECRET_ACCESS_KEY
-        sync: false
-      - key: AWS_REGION
-        value: ap-south-1
-      - key: AWS_TEXTRACT_BUCKET
-        sync: false
       - key: GSP_BASE_URL
         value: https://api.masters-india.com
       - key: GSP_USERNAME
