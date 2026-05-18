@@ -246,7 +246,7 @@ export default function GuidePage() {
       </div>
 
       <div className="text-center text-slate-600 text-xs pb-6">
-        BeMyCa · GST Filing Assistant · bemyca.cloud
+        BeMyCa · GST Filing Assistant · bemyca.cloud · 2025
       </div>
     </div>
   );
