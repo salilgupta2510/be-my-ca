@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { AlertTriangle, Calculator } from "lucide-react";
 
 function fmt(n: number) { return "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2 }); }
@@ -36,6 +37,7 @@ export default function LateFeeCalculatorPage() {
   const [returnType, setReturnType] = useState<"gstr1" | "gstr3b">("gstr3b");
   const [isNil, setIsNil] = useState(false);
   const [taxAmount, setTaxAmount] = useState("");
+  const [calculated, setCalculated] = useState(false);
 
   const dueDate = period ? dueDateFor(period, returnType) : null;
   const filing = filingDate ? new Date(filingDate) : null;
@@ -44,6 +46,9 @@ export default function LateFeeCalculatorPage() {
   const lateFee = calcLateFee(daysLate, isNil, returnType);
   const interest = calcInterest(Number(taxAmount) || 0, daysLate);
   const total = lateFee.total + interest;
+
+  const canCalculate = !!period && !!filingDate;
+
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -62,7 +67,8 @@ export default function LateFeeCalculatorPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-slate-300 text-xs">Return Type</Label>
-              <select value={returnType} onChange={e => setReturnType(e.target.value as "gstr1" | "gstr3b")}
+              <select value={returnType}
+                onChange={e => { setReturnType(e.target.value as "gstr1" | "gstr3b"); setCalculated(false); }}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 text-sm">
                 <option value="gstr3b">GSTR-3B (due 20th)</option>
                 <option value="gstr1">GSTR-1 (due 11th)</option>
@@ -70,43 +76,52 @@ export default function LateFeeCalculatorPage() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-slate-300 text-xs">Period (YYYY-MM)</Label>
-              <Input value={period} onChange={e => setPeriod(e.target.value)}
+              <Input value={period} onChange={e => { setPeriod(e.target.value); setCalculated(false); }}
                 placeholder="2025-01" className="bg-slate-800 border-slate-700 text-white font-mono" />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-slate-300 text-xs">Actual Filing Date</Label>
-            <Input type="date" value={filingDate} onChange={e => setFilingDate(e.target.value)}
+            <Input type="date" value={filingDate} onChange={e => { setFilingDate(e.target.value); setCalculated(false); }}
               className="bg-slate-800 border-slate-700 text-white" />
           </div>
 
-          {dueDate && (
+          {calculated && dueDate && (
             <p className="text-slate-400 text-xs">
               Due date: <span className="text-white font-mono">{dueDate.toISOString().split("T")[0]}</span>
               {daysLate > 0
                 ? <span className="text-red-400 ml-2">· {daysLate} days late</span>
-                : filing ? <span className="text-green-400 ml-2">· On time</span> : null}
+                : filing ? <span className="text-green-400 ml-2">· Filed on time</span> : null}
             </p>
           )}
 
           {returnType === "gstr3b" && (
             <div className="space-y-1.5">
               <Label className="text-slate-300 text-xs">Tax Payable (₹) — for interest calculation</Label>
-              <Input type="number" value={taxAmount} onChange={e => setTaxAmount(e.target.value)}
+              <Input type="number" value={taxAmount} onChange={e => { setTaxAmount(e.target.value); setCalculated(false); }}
                 placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
             </div>
           )}
 
           <div className="flex items-center gap-3">
-            <input type="checkbox" id="nil" checked={isNil} onChange={e => setIsNil(e.target.checked)}
+            <input type="checkbox" id="nil" checked={isNil}
+              onChange={e => { setIsNil(e.target.checked); setCalculated(false); }}
               className="w-4 h-4 accent-blue-500" />
             <Label htmlFor="nil" className="text-slate-300 text-xs cursor-pointer">Nil return (lower late fee)</Label>
           </div>
+
+          <Button
+            className="w-full bg-blue-600 hover:bg-blue-700"
+            disabled={!canCalculate}
+            onClick={() => setCalculated(true)}
+          >
+            <Calculator className="w-4 h-4 mr-2" /> Calculate
+          </Button>
         </CardContent>
       </Card>
 
-      {daysLate > 0 && (
+      {calculated && daysLate > 0 && (
         <div className="space-y-4">
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader><CardTitle className="text-white text-sm">Late Fee Breakdown</CardTitle></CardHeader>
@@ -173,7 +188,7 @@ export default function LateFeeCalculatorPage() {
         </div>
       )}
 
-      {daysLate === 0 && filing && dueDate && (
+      {calculated && daysLate === 0 && filing && dueDate && (
         <Card className="bg-green-950/20 border-green-800/50">
           <CardContent className="p-4">
             <p className="text-green-300 font-medium text-sm">Filed on time — no late fee or interest.</p>
