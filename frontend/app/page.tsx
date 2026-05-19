@@ -73,9 +73,9 @@ export default function LandingPage() {
               </Link>
             ) : (
               <>
-                <Link href="/login">
+                <Link href="#waitlist">
                   <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
-                    Sign in <ArrowRight className="w-5 h-5 ml-2" />
+                    Request early access <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
                 <Link href="#how-it-works">
@@ -83,9 +83,6 @@ export default function LandingPage() {
                     See how it works
                   </Button>
                 </Link>
-                <p className="w-full text-center text-slate-500 text-sm mt-2">
-                  Currently invite-only — we are not accepting new sign-ups at this time.
-                </p>
               </>
             )}
           </div>
@@ -279,9 +276,9 @@ export default function LandingPage() {
               </Link>
             ) : (
               <>
-                <Link href="/login">
+                <Link href="#waitlist">
                   <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
-                    Sign in <ArrowRight className="w-5 h-5 ml-2" />
+                    Request early access <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
                 <Link href="/pricing">
