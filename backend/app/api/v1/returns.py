@@ -162,14 +162,13 @@ async def compute_gstr3b(
         )
     )).all()
 
-    matched_recon = (await db.scalars(
+    recon_results = (await db.scalars(
         select(ReconciliationResult).where(
             ReconciliationResult.user_id == current_user.id,
             ReconciliationResult.period == period,
-            ReconciliationResult.status == ReconciliationStatus.MATCHED,
         )
     )).all()
-    reconciliation_done = len(matched_recon) > 0
+    reconciliation_done = len(recon_results) > 0
 
     out_igst = Decimal(str(sum(_f(i.igst) for i in outward)))
     out_cgst = Decimal(str(sum(_f(i.cgst) for i in outward)))

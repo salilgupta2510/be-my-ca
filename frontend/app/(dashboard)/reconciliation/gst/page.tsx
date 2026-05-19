@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { cacheGet, cacheSet } from "@/lib/cache";
+import { cacheGet, cacheSet, cacheClear } from "@/lib/cache";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -94,6 +94,7 @@ export default function GSTReconciliationPage() {
         setRows(data);
         cacheSet(cacheKey, data);
       }
+      cacheClear(`gstr3b:${period}`);
       toast.success("Reconciliation complete");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed");

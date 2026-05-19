@@ -218,7 +218,7 @@ export default function GSTR3BPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
             <p className="text-amber-400 text-sm">
-              GSTR-2B reconciliation not run — ITC set to ₹0. Run reconciliation first to claim input tax credit.
+              GSTR-2B reconciliation not run — ITC set to ₹0. Go to Reconciliation, run it, then recompute GSTR-3B to claim input tax credit.
             </p>
           </CardContent>
         </Card>
