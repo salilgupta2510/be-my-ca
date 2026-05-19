@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +87,8 @@ export default function GSTR9Page() {
     }
   }
 
+  useEffect(() => { fetchGSTR9(fy); }, []);
+
   async function compute() {
     setComputing(true);
     try {
@@ -171,7 +173,7 @@ export default function GSTR9Page() {
           </div>
 
           {/* Outward by type */}
-          {Object.keys(payload.outward_by_type).length > 0 && (
+          {payload.outward_by_type && Object.keys(payload.outward_by_type).length > 0 && (
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm">Table 4 — Outward Supplies by Type</CardTitle>
@@ -204,7 +206,7 @@ export default function GSTR9Page() {
           )}
 
           {/* Period breakdown */}
-          {payload.period_breakdown.length > 0 && (
+          {payload.period_breakdown?.length > 0 && (
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm">Month-wise Breakdown</CardTitle>
