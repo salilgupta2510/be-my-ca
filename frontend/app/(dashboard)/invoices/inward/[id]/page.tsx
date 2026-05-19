@@ -18,6 +18,10 @@ function authH(json = false) {
   return h;
 }
 
+function getPeriod() {
+  return typeof window !== "undefined" ? localStorage.getItem("bemyca_period") ?? "" : "";
+}
+
 export default function EditInwardPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -25,28 +29,36 @@ export default function EditInwardPage() {
     supplier_name: "", supplier_gstin: "",
     invoice_number: "", invoice_date: "",
     taxable_value: "", igst: "0", cgst: "0", sgst: "0",
-    period: "2025-01",
+    period: "",
   });
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const res = await fetch(`${API}/invoices/inward?period=2025-01`, { headers: authH() });
+      const period = getPeriod();
+      const res = await fetch(`${API}/invoices/inward?period=${period}`, { headers: authH() });
       if (res.ok) {
         const list = await res.json();
         const inv = list.find((i: { id: string }) => i.id === id);
-        if (inv) setForm({
-          supplier_name: inv.supplier_name,
-          supplier_gstin: inv.supplier_gstin ?? "",
-          invoice_number: inv.invoice_number,
-          invoice_date: inv.invoice_date,
-          taxable_value: inv.taxable_value,
-          igst: inv.igst,
-          cgst: inv.cgst,
-          sgst: inv.sgst,
-          period: inv.period,
-        });
+        if (inv) {
+          setForm({
+            supplier_name: inv.supplier_name,
+            supplier_gstin: inv.supplier_gstin ?? "",
+            invoice_number: inv.invoice_number,
+            invoice_date: inv.invoice_date,
+            taxable_value: inv.taxable_value,
+            igst: inv.igst,
+            cgst: inv.cgst,
+            sgst: inv.sgst,
+            period: inv.period,
+          });
+        } else {
+          setNotFound(true);
+        }
+      } else {
+        setNotFound(true);
       }
       setLoading(false);
     })();
@@ -76,6 +88,26 @@ export default function EditInwardPage() {
   }
 
   if (loading) return <div className="text-slate-400 p-8">Loading…</div>;
+
+  if (notFound) return (
+    <div className="space-y-4 max-w-2xl">
+      <div className="flex items-center gap-3">
+        <Link href="/invoices/inward">
+          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-bold text-white">Edit Invoice</h1>
+      </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-lg p-8 text-center">
+        <p className="text-slate-400 text-sm">Invoice not found for the current period.</p>
+        <p className="text-slate-500 text-xs mt-1">Make sure the correct period is selected in the dashboard.</p>
+        <Link href="/invoices/inward">
+          <Button variant="outline" className="mt-4 border-slate-700 text-slate-300 hover:text-white">Back to invoices</Button>
+        </Link>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 max-w-2xl">

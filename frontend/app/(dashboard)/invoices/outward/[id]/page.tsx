@@ -24,38 +24,49 @@ const TYPES = [
   { value: "credit_note", label: "Credit Note" },
 ];
 
+function getPeriod() {
+  return typeof window !== "undefined" ? localStorage.getItem("bemyca_period") ?? "" : "";
+}
+
 export default function EditOutwardPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [form, setForm] = useState({
     invoice_number: "", invoice_date: "", customer_name: "", customer_gstin: "",
     place_of_supply: "27", invoice_type: "b2b",
-    taxable_value: "", igst: "0", cgst: "0", sgst: "0", cess: "0", period: "2025-01",
+    taxable_value: "", igst: "0", cgst: "0", sgst: "0", cess: "0", period: "",
   });
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
-      // Load full list and find by id (no single-get endpoint)
-      const res = await fetch(`${API}/invoices/outward?period=2025-01`, { headers: authH() });
+      const period = getPeriod();
+      const res = await fetch(`${API}/invoices/outward?period=${period}`, { headers: authH() });
       if (res.ok) {
         const list = await res.json();
         const inv = list.find((i: { id: string }) => i.id === id);
-        if (inv) setForm({
-          invoice_number: inv.invoice_number,
-          invoice_date: inv.invoice_date,
-          customer_name: inv.customer_name,
-          customer_gstin: inv.customer_gstin ?? "",
-          place_of_supply: inv.place_of_supply,
-          invoice_type: inv.invoice_type,
-          taxable_value: inv.taxable_value,
-          igst: inv.igst,
-          cgst: inv.cgst,
-          sgst: inv.sgst,
-          cess: inv.cess ?? "0",
-          period: inv.period,
-        });
+        if (inv) {
+          setForm({
+            invoice_number: inv.invoice_number,
+            invoice_date: inv.invoice_date,
+            customer_name: inv.customer_name,
+            customer_gstin: inv.customer_gstin ?? "",
+            place_of_supply: inv.place_of_supply ?? "27",
+            invoice_type: inv.invoice_type,
+            taxable_value: inv.taxable_value,
+            igst: inv.igst,
+            cgst: inv.cgst,
+            sgst: inv.sgst,
+            cess: inv.cess ?? "0",
+            period: inv.period,
+          });
+        } else {
+          setNotFound(true);
+        }
+      } else {
+        setNotFound(true);
       }
       setLoading(false);
     })();
@@ -85,6 +96,26 @@ export default function EditOutwardPage() {
   }
 
   if (loading) return <div className="text-slate-400 p-8">Loading…</div>;
+
+  if (notFound) return (
+    <div className="space-y-4 max-w-2xl">
+      <div className="flex items-center gap-3">
+        <Link href="/invoices/outward">
+          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-bold text-white">Edit Invoice</h1>
+      </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-lg p-8 text-center">
+        <p className="text-slate-400 text-sm">Invoice not found for the current period.</p>
+        <p className="text-slate-500 text-xs mt-1">Make sure the correct period is selected in the dashboard.</p>
+        <Link href="/invoices/outward">
+          <Button variant="outline" className="mt-4 border-slate-700 text-slate-300 hover:text-white">Back to invoices</Button>
+        </Link>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 max-w-2xl">

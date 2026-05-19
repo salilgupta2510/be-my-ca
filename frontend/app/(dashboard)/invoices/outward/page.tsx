@@ -26,7 +26,8 @@ function fmt(n: string | number) { return "₹" + Number(n).toLocaleString("en-I
 interface Invoice {
   id: string; invoice_number: string; invoice_date: string; customer_name: string;
   customer_gstin: string | null; invoice_type: string; taxable_value: string;
-  igst: string; cgst: string; sgst: string; cess?: string; hsn_code?: string | null; source: string;
+  igst: string; cgst: string; sgst: string; cess?: string; hsn_code?: string | null;
+  place_of_supply?: string; source: string;
 }
 
 interface Business { legal_name: string; gstin: string; pan: string; state_code: string; }
@@ -196,7 +197,7 @@ export default function OutwardListPage() {
                     {business && (
                       <Button size="icon" variant="ghost" className="w-8 h-8 text-slate-400 hover:text-blue-400"
                         title="Download PDF"
-                        onClick={() => downloadInvoicePdf(business, { ...inv, cess: inv.cess ?? "0", place_of_supply: "27" })}>
+                        onClick={() => downloadInvoicePdf(business, { ...inv, cess: inv.cess ?? "0", place_of_supply: inv.place_of_supply ?? inv.customer_gstin?.slice(0, 2) ?? business.state_code ?? "27" })}>
                         <Download className="w-3.5 h-3.5" />
                       </Button>
                     )}
