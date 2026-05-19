@@ -23,10 +23,11 @@ export default function LoginPage() {
       const { data } = await api.post("/auth/login", { email, password });
       localStorage.setItem("bemyca_token", data.access_token);
       localStorage.setItem("bemyca_user", JSON.stringify({ id: data.user_id, role: data.role }));
-      if (!data.onboarding_complete) {
-        router.push("/onboarding");
-      } else {
+      try {
+        await api.get("/business/me");
         router.push("/dashboard");
+      } catch {
+        router.push("/onboarding");
       }
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Login failed");
