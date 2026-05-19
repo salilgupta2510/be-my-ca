@@ -3,11 +3,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Upload, FileText, ShieldCheck, Clock, Zap, BarChart3, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import PublicNav from "@/components/public-nav";
+
+// GST terminology streams for the animated background
+const GST_STREAMS = [
+  ["18%", "GSTR-3B", "ITC", "CGST", "Sec 16", "GSTIN", "ARN"],
+  ["28%", "₹ Credit", "B2B", "HSN 8471", "Export", "CESS"],
+  ["5%", "GSTR-1", "SGST", "Input Tax", "B2C", "Nil Rated"],
+  ["12%", "GSTR-2B", "IGST", "₹ 18,000", "Exempt", "RCM"],
+  ["₹ 0", "QRMP", "Composition", "Late Fee", "27AABCS", "ISD"],
+];
 
 export default function LandingPage() {
   const [authed, setAuthed] = useState(false);
@@ -22,9 +30,7 @@ export default function LandingPage() {
     try {
       const { data } = await api.post("/waitlist", { email: waitlistEmail, name: waitlistName || undefined });
       setWaitlistDone(true);
-      if (data.already_registered) {
-        toast.info("You're already on our list!");
-      }
+      if (data.already_registered) toast.info("You're already on our list!");
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -37,23 +43,97 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-[#06080F] text-white">
+      <style>{`
+        @keyframes floatUp {
+          0%   { transform: translateY(110vh); opacity: 0; }
+          6%   { opacity: 1; }
+          94%  { opacity: 0.55; }
+          100% { transform: translateY(-15vh); opacity: 0; }
+        }
+        @keyframes orbPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.55; transform: scale(1.1); }
+        }
+        @keyframes ledgerDrift {
+          from { background-position: 0 0; }
+          to   { background-position: 0 48px; }
+        }
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .gst-stream   { animation: floatUp linear infinite; will-change: transform; }
+        .orb-gold     { animation: orbPulse 7s ease-in-out infinite; }
+        .orb-indigo   { animation: orbPulse 9s ease-in-out infinite 3.5s; }
+        .ledger-lines { animation: ledgerDrift 3s linear infinite; }
+        .card-hover   { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .card-hover:hover {
+          border-color: rgba(245,158,11,0.28);
+          box-shadow: 0 0 0 1px rgba(245,158,11,0.08), 0 8px 32px rgba(0,0,0,0.5);
+        }
+      `}</style>
+
       <PublicNav activePage="home" />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-950/40 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute inset-0 opacity-5 pointer-events-none"
-          style={{ backgroundImage: "linear-gradient(rgba(148,163,184,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.3) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+      {/* ─── HERO ─────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden min-h-[92vh] flex items-center">
 
-        <div className="relative max-w-6xl mx-auto px-4 pt-24 pb-20 text-center">
-          <Badge className="bg-blue-950 text-blue-300 border border-blue-800 mb-6 text-xs px-3 py-1">
+        {/* Ambient orb — gold, top-right */}
+        <div className="orb-gold absolute pointer-events-none"
+          style={{ top: "-220px", right: "-200px", width: "740px", height: "740px", borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(245,158,11,0.13) 0%, rgba(245,158,11,0.04) 45%, transparent 70%)" }} />
+
+        {/* Ambient orb — indigo, bottom-left */}
+        <div className="orb-indigo absolute pointer-events-none"
+          style={{ bottom: "-280px", left: "-200px", width: "620px", height: "620px", borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(99,102,241,0.09) 0%, rgba(99,102,241,0.03) 50%, transparent 70%)" }} />
+
+        {/* Animated ledger lines — suggest accounting ledger paper */}
+        <div className="ledger-lines absolute inset-0 pointer-events-none"
+          style={{ backgroundImage: "linear-gradient(rgba(245,158,11,0.045) 1px, transparent 1px)", backgroundSize: "100% 48px" }} />
+
+        {/* Floating GST terminology columns */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
+          {GST_STREAMS.map((col, ci) => (
+            <div
+              key={ci}
+              className="gst-stream absolute flex flex-col gap-12 font-mono text-[10px] tracking-widest"
+              style={{
+                left: `${5 + ci * 19}%`,
+                color: ci % 2 === 0 ? "rgba(245,158,11,0.18)" : "rgba(139,92,246,0.14)",
+                animationDuration: `${22 + ci * 6}s`,
+                animationDelay: `${-ci * 4.5}s`,
+              }}
+            >
+              {[...col, ...col].map((t, ti) => <span key={ti}>{t}</span>)}
+            </div>
+          ))}
+        </div>
+
+        {/* Giant ₹ watermark */}
+        <div
+          className="absolute bottom-0 right-0 pointer-events-none select-none overflow-hidden"
+          aria-hidden="true"
+          style={{ fontSize: "30rem", fontWeight: 900, color: "rgba(245,158,11,0.032)", lineHeight: 0.82 }}
+        >₹</div>
+
+        {/* Edge vignette — keeps text readable */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 90% 70% at 50% 45%, transparent 22%, rgba(6,8,15,0.92) 100%)" }} />
+
+        <div className="relative max-w-6xl mx-auto px-4 pt-24 pb-20 text-center w-full">
+
+          {/* Pill badge */}
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs mb-6 border"
+            style={{ background: "rgba(28,18,2,0.85)", borderColor: "rgba(180,120,10,0.4)", color: "#FCD34D" }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
             Built for Indian small businesses
-          </Badge>
+          </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
             Upload your bills.{" "}
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-400 bg-clip-text text-transparent">
               We handle your GST.
             </span>
             <br />Forever.
@@ -67,19 +147,22 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
             {authed ? (
               <Link href="/dashboard">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
+                <Button size="lg"
+                  className="bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-900 border-0 font-semibold text-base px-8 py-6">
                   Go to Dashboard <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
             ) : (
               <>
                 <Link href="#waitlist">
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
+                  <Button size="lg"
+                    className="bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-900 border-0 font-semibold text-base px-8 py-6">
                     Request early access <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
                 <Link href="#how-it-works">
-                  <Button size="lg" variant="outline" className="border-slate-700 text-slate-300 hover:text-white text-base px-8 py-6">
+                  <Button size="lg" variant="outline"
+                    className="border-amber-900/50 text-slate-300 hover:text-white hover:border-amber-700/60 text-base px-8 py-6">
                     See how it works
                   </Button>
                 </Link>
@@ -87,7 +170,7 @@ export default function LandingPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap justify-center gap-8 text-center">
+          <div className="flex flex-wrap justify-center gap-8 sm:gap-14">
             {[
               { value: "₹0", label: "to start" },
               { value: "3 min", label: "avg filing time" },
@@ -95,7 +178,7 @@ export default function LandingPage() {
               { value: "0", label: "CA fees" },
             ].map((s) => (
               <div key={s.label}>
-                <p className="text-3xl font-bold text-white">{s.value}</p>
+                <p className="text-3xl font-bold text-amber-400">{s.value}</p>
                 <p className="text-slate-500 text-sm mt-0.5">{s.label}</p>
               </div>
             ))}
@@ -103,49 +186,44 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Trust bar */}
-      <div className="border-y border-slate-800 bg-slate-900/40">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-center gap-6 text-slate-500 text-sm">
+      {/* ─── TRUST BAR ─────────────────────────────────────────── */}
+      <div className="relative border-y" style={{ borderColor: "rgba(180,120,10,0.14)", background: "rgba(16,11,2,0.7)" }}>
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.04) 50%, transparent 100%)" }} />
+        <div className="relative max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-center gap-6 text-slate-400 text-sm">
           {["GSTIN validated", "Bank-grade encryption", "Auto GSTR-2B sync", "Deadline reminders"].map((t) => (
             <span key={t} className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-500" /> {t}
+              <CheckCircle2 className="w-4 h-4 text-amber-500" /> {t}
             </span>
           ))}
         </div>
       </div>
 
-      {/* How it works */}
+      {/* ─── HOW IT WORKS ──────────────────────────────────────── */}
       <section id="how-it-works" className="max-w-6xl mx-auto px-4 py-24">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">How it works</h2>
-          <p className="text-slate-400 max-w-xl mx-auto">Three steps. No accounting knowledge required.</p>
+          <p className="text-amber-500 text-xs font-semibold tracking-[0.2em] uppercase mb-3">Process</p>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Three steps to GST freedom</h2>
+          <p className="text-slate-400 max-w-xl mx-auto">No accounting knowledge required.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
-            {
-              step: "01",
-              icon: Upload,
-              title: "Upload your invoices",
-              desc: "Photograph your sales bills and purchase invoices. Our AI reads the amounts, GSTIN, and invoice numbers automatically.",
-            },
-            {
-              step: "02",
-              icon: BarChart3,
-              title: "We compute your returns",
-              desc: "BeMyCa calculates your GSTR-1 (sales) and GSTR-3B (summary), reconciles purchases against your supplier filings, and shows exactly what you owe.",
-            },
-            {
-              step: "03",
-              icon: ShieldCheck,
-              title: "File with one click",
-              desc: "Review the computed figures, check your ITC, and file — or hand it to your CA in one clean export. No portal login juggling.",
-            },
+            { step: "01", icon: Upload, title: "Upload your invoices", color: "text-amber-400", iconBg: "rgba(245,158,11,0.10)",
+              desc: "Photograph your sales bills and purchase invoices. Our AI reads the amounts, GSTIN, and invoice numbers automatically." },
+            { step: "02", icon: BarChart3, title: "We compute your returns", color: "text-violet-400", iconBg: "rgba(139,92,246,0.10)",
+              desc: "BeMyCa calculates your GSTR-1 and GSTR-3B, reconciles purchases against supplier filings, and shows exactly what you owe." },
+            { step: "03", icon: ShieldCheck, title: "File with one click", color: "text-emerald-400", iconBg: "rgba(16,185,129,0.10)",
+              desc: "Review the computed figures, check your ITC, and file — or export for your CA. No portal login juggling." },
           ].map((item) => (
-            <div key={item.step} className="relative bg-slate-900 border border-slate-800 rounded-2xl p-8">
-              <div className="text-5xl font-black text-slate-800 absolute top-6 right-8 select-none">{item.step}</div>
-              <div className="w-12 h-12 bg-blue-950 rounded-xl flex items-center justify-center mb-5">
-                <item.icon className="w-6 h-6 text-blue-400" />
+            <div key={item.step}
+              className="card-hover relative rounded-2xl p-8 border border-slate-800"
+              style={{ background: "rgba(10,12,20,0.85)" }}>
+              <div className="absolute top-5 right-6 text-6xl font-black select-none"
+                style={{ color: "rgba(245,158,11,0.07)" }}>{item.step}</div>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                style={{ background: item.iconBg }}>
+                <item.icon className={`w-6 h-6 ${item.color}`} />
               </div>
               <h3 className="text-white font-semibold text-lg mb-2">{item.title}</h3>
               <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
@@ -154,61 +232,37 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features */}
-      <section id="features" className="bg-slate-900/50 border-y border-slate-800">
-        <div className="max-w-6xl mx-auto px-4 py-24">
+      {/* ─── FEATURES ──────────────────────────────────────────── */}
+      <section id="features" className="relative border-y border-slate-800/40">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "linear-gradient(180deg, rgba(10,12,20,0.7) 0%, rgba(14,10,2,0.35) 50%, rgba(10,12,20,0.7) 100%)" }} />
+        <div className="relative max-w-6xl mx-auto px-4 py-24">
           <div className="text-center mb-16">
+            <p className="text-amber-500 text-xs font-semibold tracking-[0.2em] uppercase mb-3">Features</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Everything GST, handled</h2>
             <p className="text-slate-400 max-w-xl mx-auto">One dashboard. All returns. Zero confusion.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              {
-                icon: Upload,
-                color: "text-blue-400",
-                bg: "bg-blue-950/50",
-                title: "AI Invoice Reader",
-                desc: "Photograph any bill. Claude AI extracts invoice number, GSTIN, taxable value, IGST, CGST, SGST — even from crumpled receipts.",
-              },
-              {
-                icon: FileText,
-                color: "text-purple-400",
-                bg: "bg-purple-950/50",
-                title: "GSTR-1 Computation",
-                desc: "Automatically categorises your sales into B2B, B2C, exports, and credit notes. Section-wise breakdown ready to verify.",
-              },
-              {
-                icon: BarChart3,
-                color: "text-cyan-400",
-                bg: "bg-cyan-950/50",
-                title: "GSTR-2B Reconciliation",
-                desc: "Compares your purchase register against supplier-filed GSTR-2B. Flags missing invoices before you lose ITC credit.",
-              },
-              {
-                icon: Zap,
-                color: "text-yellow-400",
-                bg: "bg-yellow-950/50",
-                title: "GSTR-3B & Net Tax",
-                desc: "Subtracts eligible ITC from output tax liability. Shows exactly how much cash to transfer to the GST portal.",
-              },
-              {
-                icon: Clock,
-                color: "text-orange-400",
-                bg: "bg-orange-950/50",
-                title: "Deadline Tracker",
-                desc: "Traffic-light alerts for GSTR-1 (11th) and GSTR-3B (20th). Never pay a late fee again.",
-              },
-              {
-                icon: ShieldCheck,
-                color: "text-green-400",
-                bg: "bg-green-950/50",
-                title: "Secure & Compliant",
-                desc: "Your data stays encrypted. GSTIN validation on every invoice. Audit-ready records stored forever.",
-              },
+              { icon: Upload, color: "text-amber-400", iconBg: "rgba(245,158,11,0.10)", title: "AI Invoice Reader",
+                desc: "Photograph any bill. Claude AI extracts invoice number, GSTIN, taxable value, IGST, CGST, SGST — even from crumpled receipts." },
+              { icon: FileText, color: "text-violet-400", iconBg: "rgba(139,92,246,0.10)", title: "GSTR-1 Computation",
+                desc: "Automatically categorises your sales into B2B, B2C, exports, and credit notes. Section-wise breakdown ready to verify." },
+              { icon: BarChart3, color: "text-cyan-400", iconBg: "rgba(6,182,212,0.08)", title: "GSTR-2B Reconciliation",
+                desc: "Compares your purchase register against supplier-filed GSTR-2B. Flags missing invoices before you lose ITC credit." },
+              { icon: Zap, color: "text-amber-300", iconBg: "rgba(245,158,11,0.08)", title: "GSTR-3B & Net Tax",
+                desc: "Subtracts eligible ITC from output tax liability. Shows exactly how much cash to transfer to the GST portal." },
+              { icon: Clock, color: "text-orange-400", iconBg: "rgba(249,115,22,0.08)", title: "Deadline Tracker",
+                desc: "Traffic-light alerts for GSTR-1 (11th) and GSTR-3B (20th). Never pay a late fee again." },
+              { icon: ShieldCheck, color: "text-emerald-400", iconBg: "rgba(16,185,129,0.08)", title: "Secure & Compliant",
+                desc: "Your data stays encrypted. GSTIN validation on every invoice. Audit-ready records stored forever." },
             ].map((f) => (
-              <div key={f.title} className="bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition-colors">
-                <div className={`w-10 h-10 ${f.bg} rounded-lg flex items-center justify-center mb-4`}>
+              <div key={f.title}
+                className="card-hover rounded-xl p-6 border border-slate-800"
+                style={{ background: "rgba(10,12,20,0.85)" }}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
+                  style={{ background: f.iconBg }}>
                   <f.icon className={`w-5 h-5 ${f.color}`} />
                 </div>
                 <h3 className="text-white font-semibold mb-2">{f.title}</h3>
@@ -219,70 +273,73 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* ─── TESTIMONIALS ──────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-4 py-24">
         <div className="text-center mb-16">
+          <p className="text-amber-500 text-xs font-semibold tracking-[0.2em] uppercase mb-3">Testimonials</p>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Trusted by small business owners</h2>
           <p className="text-slate-400">From Surat to Kochi, businesses file GST without a CA</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            {
-              name: "Ramesh Agarwal",
-              role: "Textile trader, Surat",
-              quote: "Earlier I paid ₹3,000/month to a CA just to upload my bills. BeMyCa does it in minutes and costs nothing.",
-            },
-            {
-              name: "Priya Nair",
-              role: "Bakery owner, Kochi",
-              quote: "The photo upload is magic. I click a picture of the bill, it fills everything. I filed GSTR-3B myself for the first time.",
-            },
-            {
-              name: "Vikram Chawla",
-              role: "Hardware supplier, Ludhiana",
-              quote: "The GSTR-2B reconciliation caught 4 invoices my suppliers hadn't filed. Saved me ₹18,000 in ITC that I almost lost.",
-            },
+            { name: "Ramesh Agarwal", role: "Textile trader, Surat",
+              quote: "Earlier I paid ₹3,000/month to a CA just to upload my bills. BeMyCa does it in minutes and costs nothing." },
+            { name: "Priya Nair", role: "Bakery owner, Kochi",
+              quote: "The photo upload is magic. I click a picture of the bill, it fills everything. I filed GSTR-3B myself for the first time." },
+            { name: "Vikram Chawla", role: "Hardware supplier, Ludhiana",
+              quote: "The GSTR-2B reconciliation caught 4 invoices my suppliers hadn't filed. Saved me ₹18,000 in ITC that I almost lost." },
           ].map((t) => (
-            <div key={t.name} className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <div key={t.name}
+              className="card-hover rounded-xl p-6 border border-slate-800"
+              style={{ background: "rgba(10,12,20,0.85)" }}>
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
-                  <svg key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
+                  <svg key={i} className="w-4 h-4 fill-amber-400" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                 ))}
               </div>
               <p className="text-slate-300 text-sm leading-relaxed mb-4">"{t.quote}"</p>
-              <div>
-                <p className="text-white font-medium text-sm">{t.name}</p>
-                <p className="text-slate-500 text-xs">{t.role}</p>
-              </div>
+              <p className="text-white font-medium text-sm">{t.name}</p>
+              <p className="text-slate-500 text-xs">{t.role}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="bg-gradient-to-r from-blue-950 to-slate-900 border-y border-blue-900">
-        <div className="max-w-3xl mx-auto px-4 py-20 text-center">
+      {/* ─── CTA ───────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden border-y" style={{ borderColor: "rgba(180,120,10,0.14)" }}>
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "linear-gradient(135deg, rgba(20,12,1,0.98) 0%, rgba(6,8,15,0.98) 100%)" }} />
+        <div className="absolute pointer-events-none"
+          style={{ top: "-120px", left: "-80px", width: "420px", height: "420px", borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%)" }} />
+        <div className="absolute pointer-events-none"
+          style={{ bottom: "-100px", right: "-80px", width: "360px", height: "360px", borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)" }} />
+        <div className="relative max-w-3xl mx-auto px-4 py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Start filing in 3 minutes</h2>
           <p className="text-slate-400 mb-8 text-lg">No credit card. No CA. No portal passwords. Just upload your bills.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {authed ? (
               <Link href="/dashboard">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
+                <Button size="lg"
+                  className="bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-900 border-0 font-semibold text-base px-8 py-6">
                   Open Dashboard <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
             ) : (
               <>
                 <Link href="#waitlist">
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-base px-8 py-6">
+                  <Button size="lg"
+                    className="bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-900 border-0 font-semibold text-base px-8 py-6">
                     Request early access <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
                 <Link href="/pricing">
-                  <Button size="lg" variant="outline" className="border-blue-700 text-slate-300 hover:text-white text-base px-8 py-6">
+                  <Button size="lg" variant="outline"
+                    className="border-amber-900/40 text-slate-300 hover:text-white hover:border-amber-700/40 text-base px-8 py-6">
                     View pricing
                   </Button>
                 </Link>
@@ -292,65 +349,57 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Waitlist */}
+      {/* ─── WAITLIST ──────────────────────────────────────────── */}
       <section id="waitlist" className="max-w-2xl mx-auto px-4 py-24">
-        <div className="bg-gradient-to-br from-slate-900 to-blue-950/40 border border-slate-700 rounded-2xl p-8 sm:p-12 text-center">
-          <div className="inline-flex items-center gap-2 bg-blue-950 text-blue-300 border border-blue-800 rounded-full px-4 py-1.5 text-sm mb-6">
-            <Sparkles className="w-3.5 h-3.5" />
-            Limited early access
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-            Want early access?
-          </h2>
-          <p className="text-slate-400 mb-8 leading-relaxed">
-            We're onboarding businesses one by one to ensure quality. Drop your email — we'll reach out personally when your spot is ready.
-          </p>
+        <div className="relative rounded-2xl p-8 sm:p-12 text-center overflow-hidden border"
+          style={{ borderColor: "rgba(180,120,10,0.22)", background: "linear-gradient(135deg, rgba(20,14,2,0.97) 0%, rgba(10,8,20,0.97) 100%)" }}>
+          {/* Inner top glow */}
+          <div className="absolute inset-0 pointer-events-none rounded-2xl"
+            style={{ background: "radial-gradient(ellipse 80% 55% at 50% 0%, rgba(245,158,11,0.07) 0%, transparent 70%)" }} />
 
-          {waitlistDone ? (
-            <div className="flex flex-col items-center gap-3 py-4">
-              <div className="w-14 h-14 bg-green-950 rounded-full flex items-center justify-center">
-                <CheckCircle2 className="w-7 h-7 text-green-400" />
-              </div>
-              <p className="text-white font-semibold text-lg">You're on the list!</p>
-              <p className="text-slate-400 text-sm">We'll email you when your spot opens up. Usually within a few days.</p>
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm mb-6 border"
+              style={{ background: "rgba(28,18,2,0.85)", borderColor: "rgba(180,120,10,0.35)", color: "#FCD34D" }}>
+              <Sparkles className="w-3.5 h-3.5" />
+              Limited early access
             </div>
-          ) : (
-            <form onSubmit={handleWaitlist} className="flex flex-col gap-3">
-              <Input
-                type="text"
-                placeholder="Your name (optional)"
-                value={waitlistName}
-                onChange={(e) => setWaitlistName(e.target.value)}
-                className="bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500 h-12 text-center"
-              />
-              <Input
-                type="email"
-                placeholder="your@email.com"
-                value={waitlistEmail}
-                onChange={(e) => setWaitlistEmail(e.target.value)}
-                required
-                className="bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500 h-12 text-center"
-              />
-              <Button
-                type="submit"
-                size="lg"
-                className="bg-blue-600 hover:bg-blue-700 h-12 text-base mt-1"
-                disabled={waitlistLoading}
-              >
-                {waitlistLoading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Joining...</>
-                ) : (
-                  <>Request early access <ArrowRight className="w-4 h-4 ml-2" /></>
-                )}
-              </Button>
-              <p className="text-slate-600 text-xs mt-1">No spam. No password required. Just an email when you're up.</p>
-            </form>
-          )}
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">Want early access?</h2>
+            <p className="text-slate-400 mb-8 leading-relaxed">
+              We're onboarding businesses one by one to ensure quality. Drop your email — we'll reach out personally when your spot is ready.
+            </p>
+
+            {waitlistDone ? (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(245,158,11,0.12)" }}>
+                  <CheckCircle2 className="w-7 h-7 text-amber-400" />
+                </div>
+                <p className="text-white font-semibold text-lg">You're on the list!</p>
+                <p className="text-slate-400 text-sm">We'll email you when your spot opens up. Usually within a few days.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleWaitlist} className="flex flex-col gap-3">
+                <Input type="text" placeholder="Your name (optional)" value={waitlistName}
+                  onChange={(e) => setWaitlistName(e.target.value)}
+                  className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 text-center" />
+                <Input type="email" placeholder="your@email.com" value={waitlistEmail}
+                  onChange={(e) => setWaitlistEmail(e.target.value)} required
+                  className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 text-center" />
+                <Button type="submit" size="lg" disabled={waitlistLoading}
+                  className="bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-900 border-0 font-semibold h-12 text-base mt-1">
+                  {waitlistLoading
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Joining...</>
+                    : <>Request early access <ArrowRight className="w-4 h-4 ml-2" /></>}
+                </Button>
+                <p className="text-slate-600 text-xs mt-1">No spam. No password required. Just an email when you're up.</p>
+              </form>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800 bg-slate-950">
+      {/* ─── FOOTER ────────────────────────────────────────────── */}
+      <footer className="border-t border-slate-800/40" style={{ background: "rgba(5,7,13,0.98)" }}>
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="flex flex-col md:flex-row justify-between gap-8">
             <div>
@@ -361,21 +410,21 @@ export default function LandingPage() {
               <div>
                 <p className="text-white font-medium mb-3">Product</p>
                 <div className="flex flex-col gap-2 text-slate-500">
-                  <a href="#features" className="hover:text-white transition-colors">Features</a>
-                  <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-                  <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
+                  <a href="#features" className="hover:text-amber-400 transition-colors">Features</a>
+                  <Link href="/pricing" className="hover:text-amber-400 transition-colors">Pricing</Link>
+                  <a href="#how-it-works" className="hover:text-amber-400 transition-colors">How it works</a>
                 </div>
               </div>
               <div>
                 <p className="text-white font-medium mb-3">Account</p>
                 <div className="flex flex-col gap-2 text-slate-500">
-                  <Link href="/login" className="hover:text-white transition-colors">Sign in</Link>
-                  <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                  <Link href="/login" className="hover:text-amber-400 transition-colors">Sign in</Link>
+                  <Link href="/dashboard" className="hover:text-amber-400 transition-colors">Dashboard</Link>
                 </div>
               </div>
             </div>
           </div>
-          <div className="border-t border-slate-800 mt-8 pt-8 flex flex-col sm:flex-row justify-between gap-3 text-slate-600 text-xs">
+          <div className="border-t border-slate-800/40 mt-8 pt-8 flex flex-col sm:flex-row justify-between gap-3 text-slate-600 text-xs">
             <p>© 2025 BeMyCa. All rights reserved.</p>
             <p>Made in India for Indian businesses</p>
           </div>
