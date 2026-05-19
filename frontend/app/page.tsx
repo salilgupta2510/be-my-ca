@@ -81,27 +81,32 @@ export default function LandingPage() {
 
         {/* Ambient orb — gold, top-right */}
         <div className="orb-gold absolute pointer-events-none"
-          style={{ top: "-220px", right: "-200px", width: "740px", height: "740px", borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(245,158,11,0.13) 0%, rgba(245,158,11,0.04) 45%, transparent 70%)" }} />
+          style={{ top: "-180px", right: "-160px", width: "820px", height: "820px", borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(245,158,11,0.28) 0%, rgba(245,158,11,0.10) 40%, transparent 68%)" }} />
 
         {/* Ambient orb — indigo, bottom-left */}
         <div className="orb-indigo absolute pointer-events-none"
-          style={{ bottom: "-280px", left: "-200px", width: "620px", height: "620px", borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(99,102,241,0.09) 0%, rgba(99,102,241,0.03) 50%, transparent 70%)" }} />
+          style={{ bottom: "-240px", left: "-160px", width: "700px", height: "700px", borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(99,102,241,0.20) 0%, rgba(99,102,241,0.07) 45%, transparent 68%)" }} />
+
+        {/* Ambient orb — gold, center-bottom (extra warmth) */}
+        <div className="absolute pointer-events-none"
+          style={{ bottom: "-60px", left: "50%", transform: "translateX(-50%)", width: "600px", height: "300px", borderRadius: "50%",
+            background: "radial-gradient(ellipse, rgba(245,158,11,0.10) 0%, transparent 70%)" }} />
 
         {/* Animated ledger lines — suggest accounting ledger paper */}
         <div className="ledger-lines absolute inset-0 pointer-events-none"
-          style={{ backgroundImage: "linear-gradient(rgba(245,158,11,0.045) 1px, transparent 1px)", backgroundSize: "100% 48px" }} />
+          style={{ backgroundImage: "linear-gradient(rgba(245,158,11,0.11) 1px, transparent 1px)", backgroundSize: "100% 48px" }} />
 
         {/* Floating GST terminology columns */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
           {GST_STREAMS.map((col, ci) => (
             <div
               key={ci}
-              className="gst-stream absolute flex flex-col gap-12 font-mono text-[10px] tracking-widest"
+              className="gst-stream absolute flex flex-col gap-12 font-mono text-[11px] tracking-widest"
               style={{
                 left: `${5 + ci * 19}%`,
-                color: ci % 2 === 0 ? "rgba(245,158,11,0.18)" : "rgba(139,92,246,0.14)",
+                color: ci % 2 === 0 ? "rgba(245,158,11,0.46)" : "rgba(139,92,246,0.34)",
                 animationDuration: `${22 + ci * 6}s`,
                 animationDelay: `${-ci * 4.5}s`,
               }}
@@ -115,12 +120,12 @@ export default function LandingPage() {
         <div
           className="absolute bottom-0 right-0 pointer-events-none select-none overflow-hidden"
           aria-hidden="true"
-          style={{ fontSize: "30rem", fontWeight: 900, color: "rgba(245,158,11,0.032)", lineHeight: 0.82 }}
+          style={{ fontSize: "30rem", fontWeight: 900, color: "rgba(245,158,11,0.082)", lineHeight: 0.82 }}
         >₹</div>
 
         {/* Edge vignette — keeps text readable */}
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 90% 70% at 50% 45%, transparent 22%, rgba(6,8,15,0.92) 100%)" }} />
+          style={{ background: "radial-gradient(ellipse 88% 65% at 50% 42%, transparent 28%, rgba(6,8,15,0.84) 100%)" }} />
 
         <div className="relative max-w-6xl mx-auto px-4 pt-24 pb-20 text-center w-full">
 
