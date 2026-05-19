@@ -1,36 +1,62 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown, BookOpen, FlaskConical } from "lucide-react";
+import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown, BookOpen, FlaskConical, Calculator, Wallet, BarChart3 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   {
-    label: "Invoices", icon: FileText, children: [
+    label: "Invoices", icon: FileText, prefix: "/invoices", children: [
       { href: "/invoices/outward", label: "Sales", icon: ArrowUpCircle },
       { href: "/invoices/inward", label: "Purchases", icon: ArrowDownCircle },
     ],
   },
-  { href: "/reconciliation/gst", label: "GSTR-2B Reconciliation", icon: GitMerge },
-  { href: "/returns/gstr1", label: "GSTR-1", icon: FileText },
-  { href: "/returns/gstr3b", label: "GSTR-3B", icon: FileText },
+  { href: "/reconciliation/gst", label: "GSTR-2B Recon", icon: GitMerge },
+  {
+    label: "Returns", icon: BarChart3, prefix: "/returns", children: [
+      { href: "/returns/gstr1", label: "GSTR-1", icon: FileText },
+      { href: "/returns/gstr3b", label: "GSTR-3B", icon: FileText },
+      { href: "/returns/gstr9", label: "GSTR-9 Annual", icon: FileText },
+    ],
+  },
+  { href: "/ledger/itc", label: "ITC Ledger", icon: Wallet },
+  {
+    label: "Tools", icon: Calculator, prefix: "/tools", children: [
+      { href: "/tools/late-fee", label: "Late Fee & Interest", icon: Calculator },
+    ],
+  },
   { href: "/guide", label: "User Guide", icon: BookOpen },
   { href: "/seed", label: "Sample Data", icon: FlaskConical },
 ];
 
+type NavChild = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
 type NavItem =
-  | { href: string; label: string; icon: React.ComponentType<{ className?: string }>; children?: never }
-  | { href?: never; label: string; icon: React.ComponentType<{ className?: string }>; children: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] };
+  | { href: string; label: string; icon: React.ComponentType<{ className?: string }>; children?: never; prefix?: never }
+  | { href?: never; label: string; icon: React.ComponentType<{ className?: string }>; prefix: string; children: NavChild[] };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [invoicesOpen, setInvoicesOpen] = useState(
-    pathname.startsWith("/invoices")
-  );
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const item of NAV) {
+      if (item.children && item.prefix && pathname.startsWith(item.prefix)) {
+        initial.add(item.label);
+      }
+    }
+    return initial;
+  });
+
+  function toggleGroup(label: string) {
+    setOpenGroups(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  }
 
   useEffect(() => {
     const token = localStorage.getItem("bemyca_token");
@@ -58,20 +84,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {(NAV as NavItem[]).map((item) => {
               if (item.children) {
-                const groupActive = pathname.startsWith("/invoices");
+                const groupActive = item.prefix ? pathname.startsWith(item.prefix) : false;
+                const isOpen = openGroups.has(item.label);
                 return (
                   <div key={item.label}>
                     <button
-                      onClick={() => setInvoicesOpen(o => !o)}
+                      onClick={() => toggleGroup(item.label)}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full ${
                         groupActive ? "text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
                       }`}
                     >
                       <item.icon className="w-4 h-4" />
                       <span className="flex-1 text-left">{item.label}</span>
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${invoicesOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                     </button>
-                    {invoicesOpen && (
+                    {isOpen && (
                       <div className="ml-7 mt-1 space-y-1">
                         {item.children.map(child => {
                           const active = pathname === child.href || pathname.startsWith(child.href + "/");

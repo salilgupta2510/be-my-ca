@@ -372,6 +372,216 @@ async def get_gstr4(
     return gstr4
 
 
+
+# ─── GSTR-9 (Annual Return) ──────────────────────────────────────────────────
+
+def _fy_periods(fy: str) -> list[str]:
+    """'2024-25' → ['2024-04'..'2024-12', '2025-01'..'2025-03']"""
+    y1, y2 = fy.split("-")
+    return [f"{y1}-{m:02d}" for m in range(4, 13)] + [f"20{y2}-{m:02d}" for m in range(1, 4)]
+
+
+@router.post("/gstr9/compute", response_model=GSTReturnOut)
+async def compute_gstr9(
+    fy: str = Query(..., description="Financial year e.g. 2024-25"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    business = await _get_business(db, current_user)
+    if business.is_composition:
+        raise HTTPException(400, "Composition dealers file GSTR-4 annually, not GSTR-9.")
+
+    periods = _fy_periods(fy)
+
+    outward = (await db.scalars(
+        select(OutwardInvoice).where(
+            OutwardInvoice.business_id == business.id,
+            OutwardInvoice.period.in_(periods),
+        )
+    )).all()
+
+    inward = (await db.scalars(
+        select(InwardInvoice).where(
+            InwardInvoice.business_id == business.id,
+            InwardInvoice.period.in_(periods),
+        )
+    )).all()
+
+    gstr1_returns = (await db.scalars(
+        select(GSTReturn).where(
+            GSTReturn.business_id == business.id,
+            GSTReturn.period.in_(periods),
+            GSTReturn.return_type == ReturnType.GSTR1,
+        )
+    )).all()
+
+    gstr3b_returns = (await db.scalars(
+        select(GSTReturn).where(
+            GSTReturn.business_id == business.id,
+            GSTReturn.period.in_(periods),
+            GSTReturn.return_type == ReturnType.GSTR3B,
+        )
+    )).all()
+
+    total_taxable = sum(_f(i.taxable_value) for i in outward)
+    total_igst_out = sum(_f(i.igst) for i in outward)
+    total_cgst_out = sum(_f(i.cgst) for i in outward)
+    total_sgst_out = sum(_f(i.sgst) for i in outward)
+    total_cess_out = sum(_f(getattr(i, "cess", 0)) for i in outward)
+    total_tax_out = total_igst_out + total_cgst_out + total_sgst_out + total_cess_out
+
+    total_igst_in = sum(_f(i.igst) for i in inward)
+    total_cgst_in = sum(_f(i.cgst) for i in inward)
+    total_sgst_in = sum(_f(i.sgst) for i in inward)
+    total_itc = total_igst_in + total_cgst_in + total_sgst_in
+
+    gstr3b_tax_paid = sum(_f(r.total_tax_payable) for r in gstr3b_returns)
+    gstr3b_itc_claimed = sum(_f(r.itc_claimed) for r in gstr3b_returns)
+
+    by_type = {}
+    for inv_type in InvoiceType:
+        lst = [i for i in outward if i.invoice_type == inv_type]
+        by_type[inv_type.value] = {
+            "count": len(lst),
+            "taxable_value": sum(_f(i.taxable_value) for i in lst),
+            "igst": sum(_f(i.igst) for i in lst),
+            "cgst": sum(_f(i.cgst) for i in lst),
+            "sgst": sum(_f(i.sgst) for i in lst),
+        }
+
+    period_wise = {}
+    for p in periods:
+        p_out = [i for i in outward if i.period == p]
+        p_in = [i for i in inward if i.period == p]
+        gstr1 = next((r for r in gstr1_returns if r.period == p), None)
+        gstr3b = next((r for r in gstr3b_returns if r.period == p), None)
+        period_wise[p] = {
+            "outward_count": len(p_out),
+            "outward_taxable": sum(_f(i.taxable_value) for i in p_out),
+            "outward_tax": sum(_f(i.igst) + _f(i.cgst) + _f(i.sgst) for i in p_out),
+            "inward_count": len(p_in),
+            "inward_itc": sum(_f(i.igst) + _f(i.cgst) + _f(i.sgst) for i in p_in),
+            "gstr1_filed": gstr1.status == ReturnStatus.FILED if gstr1 else False,
+            "gstr3b_filed": gstr3b.status == ReturnStatus.FILED if gstr3b else False,
+            "tax_paid": _f(gstr3b.total_tax_payable) if gstr3b else 0,
+        }
+
+    payload = {
+        "financial_year": fy,
+        "periods": periods,
+        "outward_supplies": {
+            "by_type": by_type,
+            "total_taxable_value": total_taxable,
+            "total_igst": total_igst_out,
+            "total_cgst": total_cgst_out,
+            "total_sgst": total_sgst_out,
+            "total_cess": total_cess_out,
+            "total_tax": total_tax_out,
+            "invoice_count": len(outward),
+        },
+        "inward_supplies": {
+            "total_igst": total_igst_in,
+            "total_cgst": total_cgst_in,
+            "total_sgst": total_sgst_in,
+            "total_itc": total_itc,
+            "invoice_count": len(inward),
+        },
+        "returns_summary": {
+            "gstr1_filed_count": sum(1 for r in gstr1_returns if r.status == ReturnStatus.FILED),
+            "gstr3b_filed_count": sum(1 for r in gstr3b_returns if r.status == ReturnStatus.FILED),
+            "gstr1_total": len(gstr1_returns),
+            "gstr3b_total": len(gstr3b_returns),
+            "tax_paid_via_gstr3b": gstr3b_tax_paid,
+            "itc_claimed_via_gstr3b": gstr3b_itc_claimed,
+        },
+        "period_wise": period_wise,
+    }
+
+    existing = await _get_or_none(db, business.id, fy, ReturnType.GSTR9)
+    if existing:
+        existing.computed_payload = payload
+        existing.total_tax_payable = Decimal(str(gstr3b_tax_paid))
+        existing.itc_claimed = Decimal(str(gstr3b_itc_claimed))
+        existing.status = ReturnStatus.DRAFT
+    else:
+        existing = GSTReturn(
+            id=uuid.uuid4(),
+            business_id=business.id,
+            period=fy,
+            return_type=ReturnType.GSTR9,
+            computed_payload=payload,
+            total_tax_payable=Decimal(str(gstr3b_tax_paid)),
+            itc_claimed=Decimal(str(gstr3b_itc_claimed)),
+        )
+        db.add(existing)
+
+    await db.commit()
+    await db.refresh(existing)
+    return existing
+
+
+@router.get("/gstr9", response_model=GSTReturnOut)
+async def get_gstr9(
+    fy: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    business = await _get_business(db, current_user)
+    gstr9 = await _get_or_none(db, business.id, fy, ReturnType.GSTR9)
+    if not gstr9:
+        raise HTTPException(404, "GSTR-9 not computed.")
+    return gstr9
+
+
+@router.get("/trends")
+async def get_trends(
+    periods: str = Query(..., description="Comma-separated periods e.g. 2025-01,2025-02"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    business = await _get_business(db, current_user)
+    period_list = [p.strip() for p in periods.split(",")]
+
+    outward = (await db.scalars(
+        select(OutwardInvoice).where(
+            OutwardInvoice.business_id == business.id,
+            OutwardInvoice.period.in_(period_list),
+        )
+    )).all()
+
+    inward = (await db.scalars(
+        select(InwardInvoice).where(
+            InwardInvoice.business_id == business.id,
+            InwardInvoice.period.in_(period_list),
+        )
+    )).all()
+
+    gstr3b_returns = (await db.scalars(
+        select(GSTReturn).where(
+            GSTReturn.business_id == business.id,
+            GSTReturn.period.in_(period_list),
+            GSTReturn.return_type == ReturnType.GSTR3B,
+        )
+    )).all()
+
+    result = []
+    for p in period_list:
+        p_out = [i for i in outward if i.period == p]
+        p_in = [i for i in inward if i.period == p]
+        gstr3b = next((r for r in gstr3b_returns if r.period == p), None)
+        result.append({
+            "period": p,
+            "taxable_value": sum(_f(i.taxable_value) for i in p_out),
+            "tax_liability": sum(_f(i.igst) + _f(i.cgst) + _f(i.sgst) for i in p_out),
+            "itc_available": sum(_f(i.igst) + _f(i.cgst) + _f(i.sgst) for i in p_in),
+            "tax_paid": _f(gstr3b.total_tax_payable) if gstr3b else 0,
+            "itc_claimed": _f(gstr3b.itc_claimed) if gstr3b else 0,
+            "invoice_count": len(p_out),
+        })
+
+    return result
+
+
 @router.post("/{return_id}/file", response_model=GSTReturnOut)
 async def file_return(
     return_id: str,

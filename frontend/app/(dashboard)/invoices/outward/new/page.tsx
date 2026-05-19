@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, FileText, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { validateGstin } from "@/lib/gstin";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -54,7 +55,7 @@ export default function NewOutwardPage() {
   const [form, setForm] = useState({
     invoice_number: "", invoice_date: "", customer_name: "", customer_gstin: "",
     place_of_supply: "27", invoice_type: "b2b",
-    taxable_value: "", igst: "0", cgst: "0", sgst: "0", cess: "0",
+    taxable_value: "", igst: "0", cgst: "0", sgst: "0", cess: "0", hsn_code: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -108,6 +109,7 @@ export default function NewOutwardPage() {
         cgst: form.cgst || "0",
         sgst: form.sgst || "0",
         cess: form.cess || "0",
+        hsn_code: form.hsn_code || null,
       };
 
       let res: Response;
@@ -238,7 +240,10 @@ export default function NewOutwardPage() {
               <div className="space-y-1.5">
                 <Label className="text-slate-300 text-xs">Customer GSTIN (optional for B2C)</Label>
                 <Input value={form.customer_gstin} onChange={e => setF("customer_gstin", e.target.value.toUpperCase())}
-                  placeholder="27AABCS1429B1ZB" className="bg-slate-800 border-slate-700 text-white font-mono" />
+                  placeholder="27AABCS1429B1ZB" className={`bg-slate-800 border-slate-700 text-white font-mono ${form.customer_gstin && validateGstin(form.customer_gstin) ? "border-red-600" : ""}`} />
+                {form.customer_gstin && validateGstin(form.customer_gstin) && (
+                  <p className="text-red-400 text-xs">{validateGstin(form.customer_gstin)}</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-slate-300 text-xs">Place of Supply (state code)</Label>
@@ -262,6 +267,19 @@ export default function NewOutwardPage() {
               <Label className="text-slate-300 text-xs">Taxable Value (₹)</Label>
               <Input type="number" value={form.taxable_value} onChange={e => setF("taxable_value", e.target.value)}
                 placeholder="100000" className="bg-slate-800 border-slate-700 text-white" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-slate-300 text-xs">HSN / SAC Code (optional)</Label>
+                <Input value={form.hsn_code} onChange={e => setF("hsn_code", e.target.value)}
+                  placeholder="998311" maxLength={8} className="bg-slate-800 border-slate-700 text-white font-mono" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-300 text-xs">CESS (₹)</Label>
+                <Input type="number" value={form.cess} onChange={e => setF("cess", e.target.value)}
+                  placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">

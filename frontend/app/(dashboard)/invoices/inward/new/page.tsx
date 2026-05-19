@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { validateGstin } from "@/lib/gstin";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -30,6 +31,7 @@ export default function NewInwardPage() {
     supplier_name: "", supplier_gstin: "",
     invoice_number: "", invoice_date: "",
     taxable_value: "", igst: "0", cgst: "0", sgst: "0",
+    hsn_code: "", is_rcm: false,
   });
   const [saving, setSaving] = useState(false);
 
@@ -51,6 +53,8 @@ export default function NewInwardPage() {
           igst: form.igst || "0",
           cgst: form.cgst || "0",
           sgst: form.sgst || "0",
+          hsn_code: form.hsn_code || null,
+          is_rcm: form.is_rcm,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "Save failed");
@@ -86,7 +90,10 @@ export default function NewInwardPage() {
           <div className="space-y-1.5">
             <Label className="text-slate-300 text-xs">Supplier GSTIN (optional)</Label>
             <Input value={form.supplier_gstin} onChange={e => setF("supplier_gstin", e.target.value.toUpperCase())}
-              placeholder="27AABCS1429B1ZB" className="bg-slate-800 border-slate-700 text-white font-mono" />
+              placeholder="27AABCS1429B1ZB" className={`bg-slate-800 border-slate-700 text-white font-mono ${form.supplier_gstin && validateGstin(form.supplier_gstin) ? "border-red-600" : ""}`} />
+            {form.supplier_gstin && validateGstin(form.supplier_gstin) && (
+              <p className="text-red-400 text-xs">{validateGstin(form.supplier_gstin)}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -108,11 +115,27 @@ export default function NewInwardPage() {
               placeholder="100000" className="bg-slate-800 border-slate-700 text-white" />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-slate-300 text-xs">HSN / SAC Code (optional)</Label>
+              <Input value={form.hsn_code} onChange={e => setF("hsn_code", e.target.value)}
+                placeholder="998311" maxLength={8} className="bg-slate-800 border-slate-700 text-white font-mono" />
+            </div>
+            <div className="flex items-center gap-3 pt-5">
+              <input type="checkbox" id="is_rcm" checked={form.is_rcm}
+                onChange={e => setForm(f => ({ ...f, is_rcm: e.target.checked }))}
+                className="w-4 h-4 accent-blue-500" />
+              <Label htmlFor="is_rcm" className="text-slate-300 text-xs cursor-pointer">
+                Reverse Charge (RCM)
+              </Label>
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-3">
             {[{ k: "igst", label: "IGST (₹)" }, { k: "cgst", label: "CGST (₹)" }, { k: "sgst", label: "SGST (₹)" }].map(({ k, label }) => (
               <div key={k} className="space-y-1.5">
                 <Label className="text-slate-300 text-xs">{label}</Label>
-                <Input type="number" value={(form as Record<string, string>)[k]}
+                <Input type="number" value={(form as Record<string, unknown>)[k] as string}
                   onChange={e => setF(k, e.target.value)}
                   placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
               </div>

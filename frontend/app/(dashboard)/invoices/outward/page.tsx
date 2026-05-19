@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Search, Pencil, Trash2 } from "lucide-react";
+import { PlusCircle, Search, Pencil, Trash2, Download } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { downloadCsv } from "@/lib/csv";
+import { downloadInvoicePdf } from "@/components/invoice-pdf";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -24,8 +26,10 @@ function fmt(n: string | number) { return "₹" + Number(n).toLocaleString("en-I
 interface Invoice {
   id: string; invoice_number: string; invoice_date: string; customer_name: string;
   customer_gstin: string | null; invoice_type: string; taxable_value: string;
-  igst: string; cgst: string; sgst: string; source: string;
+  igst: string; cgst: string; sgst: string; cess?: string; hsn_code?: string | null; source: string;
 }
+
+interface Business { legal_name: string; gstin: string; pan: string; state_code: string; }
 
 const TYPE_LABELS: Record<string, string> = {
   b2b: "B2B", b2c_large: "B2C Large", b2c_small: "B2C Small", export: "Export", credit_note: "Credit Note",
@@ -57,16 +61,21 @@ export default function OutwardListPage() {
   const [invoices, setInvoices] = useState<Invoice[]>(cached ?? []);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(!cached);
+  const [business, setBusiness] = useState<Business | null>(null);
 
   useEffect(() => {
     async function load(silent: boolean) {
       if (!silent) setLoading(true);
-      const res = await fetch(`${API}/invoices/outward?period=${period}`, { headers: authH() });
-      if (res.ok) {
-        const data = await res.json();
+      const [invRes, bizRes] = await Promise.all([
+        fetch(`${API}/invoices/outward?period=${period}`, { headers: authH() }),
+        fetch(`${API}/business/me`, { headers: authH() }),
+      ]);
+      if (invRes.ok) {
+        const data = await invRes.json();
         setInvoices(data);
         cacheSet(cacheKey, data);
       }
+      if (bizRes.ok) setBusiness(await bizRes.json());
       setLoading(false);
     }
     load(!!cached);
@@ -97,11 +106,23 @@ export default function OutwardListPage() {
           <h1 className="text-2xl font-bold text-white">Sales Invoices</h1>
           <p className="text-slate-400 text-sm mt-0.5">Period: {period}</p>
         </div>
-        <Link href="/invoices/outward/new">
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <PlusCircle className="w-4 h-4 mr-2" /> Add Invoice
+        <div className="flex gap-2">
+          <Button variant="outline" className="border-slate-700 text-slate-300 hover:text-white"
+            onClick={() => downloadCsv(`sales-invoices-${period}.csv`, invoices.map(i => ({
+              invoice_number: i.invoice_number, invoice_date: i.invoice_date,
+              customer_name: i.customer_name, customer_gstin: i.customer_gstin ?? "",
+              invoice_type: i.invoice_type, taxable_value: i.taxable_value,
+              igst: i.igst, cgst: i.cgst, sgst: i.sgst,
+              total_tax: Number(i.igst) + Number(i.cgst) + Number(i.sgst),
+            })))} disabled={invoices.length === 0}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
-        </Link>
+          <Link href="/invoices/outward/new">
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <PlusCircle className="w-4 h-4 mr-2" /> Add Invoice
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -172,6 +193,13 @@ export default function OutwardListPage() {
                     <p className="text-slate-400 text-xs">GST: {fmt(Number(inv.igst) + Number(inv.cgst) + Number(inv.sgst))}</p>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
+                    {business && (
+                      <Button size="icon" variant="ghost" className="w-8 h-8 text-slate-400 hover:text-blue-400"
+                        title="Download PDF"
+                        onClick={() => downloadInvoicePdf(business, { ...inv, cess: inv.cess ?? "0", place_of_supply: "27" })}>
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                     <Link href={`/invoices/outward/${inv.id}`}>
                       <Button size="icon" variant="ghost" className="w-8 h-8 text-slate-400 hover:text-white">
                         <Pencil className="w-3.5 h-3.5" />

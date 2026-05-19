@@ -4,10 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Search, Pencil, Trash2 } from "lucide-react";
+import { PlusCircle, Search, Pencil, Trash2, Download } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { downloadCsv } from "@/lib/csv";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -92,11 +93,23 @@ export default function InwardListPage() {
           <h1 className="text-2xl font-bold text-white">Purchase Invoices</h1>
           <p className="text-slate-400 text-sm mt-0.5">Period: {period}</p>
         </div>
-        <Link href="/invoices/inward/new">
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <PlusCircle className="w-4 h-4 mr-2" /> Add Invoice
+        <div className="flex gap-2">
+          <Button variant="outline" className="border-slate-700 text-slate-300 hover:text-white"
+            onClick={() => downloadCsv(`purchase-invoices-${period}.csv`, invoices.map(i => ({
+              invoice_number: i.invoice_number, invoice_date: i.invoice_date,
+              supplier_name: i.supplier_name, supplier_gstin: i.supplier_gstin ?? "",
+              taxable_value: i.taxable_value,
+              igst: i.igst, cgst: i.cgst, sgst: i.sgst,
+              total_tax: Number(i.igst) + Number(i.cgst) + Number(i.sgst),
+            })))} disabled={invoices.length === 0}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
-        </Link>
+          <Link href="/invoices/inward/new">
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <PlusCircle className="w-4 h-4 mr-2" /> Add Invoice
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">

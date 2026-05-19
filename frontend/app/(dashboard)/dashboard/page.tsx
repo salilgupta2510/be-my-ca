@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, FileText, Loader2, PlusCircle, ReceiptText, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend } from "recharts";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -41,6 +42,20 @@ function formatPeriodLabel(period: string): string {
 
 const PERIODS = generatePeriods();
 
+function last6Periods(current: string): string[] {
+  const [y, m] = current.split("-").map(Number);
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(y, m - 1 - (5 - i), 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+}
+
+function shortMonth(period: string) {
+  const [year, month] = period.split("-");
+  return new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("en-IN", { month: "short" });
+}
+
+interface TrendPoint { period: string; taxable_value: number; tax_liability: number; itc_available: number; invoice_count: number; }
 interface Business { legal_name: string; gstin: string; state_code: string; return_frequency: string; }
 interface GSTR3BPayload {
   outward_tax_liability: { total: number };
@@ -114,6 +129,7 @@ export default function DashboardPage() {
   const [inCount, setInCount] = useState<number | null>(cached?.inCount ?? null);
   const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
+  const [trends, setTrends] = useState<TrendPoint[]>([]);
 
   useEffect(() => {
     const cached = cacheGet<CacheData>(cacheKey);
@@ -148,6 +164,10 @@ export default function DashboardPage() {
         const g3Res = await fetch(`${API}/returns/gstr3b?period=${period}`, { headers: authHeaders() });
         const g3Data: GSTR3B | null = g3Res.ok ? await g3Res.json() : null;
         if (g3Data) setGstr3b(g3Data);
+
+        const trendPeriods = last6Periods(period);
+        const tRes = await fetch(`${API}/returns/trends?periods=${trendPeriods.join(",")}`, { headers: authHeaders() });
+        if (tRes.ok) setTrends(await tRes.json());
 
         cacheSet(cacheKey, {
           business: bData,
@@ -321,6 +341,35 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* Trend chart */}
+      {trends.length > 0 && (
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-white text-base flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-blue-400" /> 6-Month Trend
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <ComposedChart data={trends.map(t => ({ ...t, month: shortMonth(t.period) }))} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={v => "₹" + (v >= 100000 ? (v / 100000).toFixed(0) + "L" : (v / 1000).toFixed(0) + "k")}
+                  tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} width={52} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: 6, fontSize: 12 }}
+                  labelStyle={{ color: "#e2e8f0" }}
+                  formatter={(value, name) => ["₹" + Number(value).toLocaleString("en-IN"), String(name)]}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
+                <Bar dataKey="tax_liability" name="Tax Liability" fill="#3b82f6" radius={[2, 2, 0, 0]} maxBarSize={32} />
+                <Bar dataKey="itc_available" name="ITC Available" fill="#22c55e" radius={[2, 2, 0, 0]} maxBarSize={32} />
+                <Line dataKey="taxable_value" name="Turnover" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3, fill: "#f59e0b" }} type="monotone" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick actions */}
       <Card className="bg-slate-900 border-slate-800">

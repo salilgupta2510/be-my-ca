@@ -28,6 +28,15 @@ interface GSTR1Section {
   igst: number; cgst: number; sgst: number; cess: number;
 }
 
+interface OutwardInvoice {
+  hsn_code: string | null; invoice_type: string;
+  taxable_value: string; igst: string; cgst: string; sgst: string;
+}
+
+interface HsnRow {
+  hsn: string; count: number; taxable: number; igst: number; cgst: number; sgst: number;
+}
+
 interface GSTR1Return {
   id: string; period: string; status: string; arn: string | null; total_tax_payable: string;
   computed_payload: {
@@ -102,17 +111,38 @@ export default function GSTR1Page() {
   );
   const [loading, setLoading] = useState(!cached);
   const [computing, setComputing] = useState(false);
+  const [hsnRows, setHsnRows] = useState<HsnRow[]>([]);
 
   useEffect(() => {
     async function load(silent: boolean) {
       if (!silent) setLoading(true);
-      const res = await fetch(`${API}/returns/gstr1?period=${period}`, { headers: authH() });
+      const [res, invRes] = await Promise.all([
+        fetch(`${API}/returns/gstr1?period=${period}`, { headers: authH() }),
+        fetch(`${API}/invoices/outward?period=${period}`, { headers: authH() }),
+      ]);
       if (res.ok) {
         const data = await res.json();
         setRet(data);
         cacheSet(cacheKey, data);
       } else {
         cacheSet(cacheKey, "none");
+      }
+      if (invRes.ok) {
+        const invs: OutwardInvoice[] = await invRes.json();
+        const map = new Map<string, HsnRow>();
+        for (const inv of invs) {
+          const key = inv.hsn_code?.trim() || "—";
+          const existing = map.get(key) ?? { hsn: key, count: 0, taxable: 0, igst: 0, cgst: 0, sgst: 0 };
+          map.set(key, {
+            ...existing,
+            count: existing.count + 1,
+            taxable: existing.taxable + Number(inv.taxable_value),
+            igst: existing.igst + Number(inv.igst),
+            cgst: existing.cgst + Number(inv.cgst),
+            sgst: existing.sgst + Number(inv.sgst),
+          });
+        }
+        setHsnRows(Array.from(map.values()).sort((a, b) => b.taxable - a.taxable));
       }
       setLoading(false);
     }
@@ -234,6 +264,52 @@ export default function GSTR1Page() {
             </Card>
           ))}
         </div>
+      )}
+
+      {hsnRows.length > 0 && (
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm">Table 12 — HSN / SAC Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="text-left text-slate-400 text-xs font-medium px-4 py-2">HSN / SAC</th>
+                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">Invoices</th>
+                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">Taxable</th>
+                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">IGST</th>
+                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">CGST</th>
+                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">SGST</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hsnRows.map(row => (
+                    <tr key={row.hsn} className="border-b border-slate-800/50 last:border-0">
+                      <td className="px-4 py-2 text-white font-mono text-xs">{row.hsn}</td>
+                      <td className="px-4 py-2 text-right text-slate-300">{row.count}</td>
+                      <td className="px-4 py-2 text-right text-white">{fmt(row.taxable)}</td>
+                      <td className="px-4 py-2 text-right text-slate-300">{fmt(row.igst)}</td>
+                      <td className="px-4 py-2 text-right text-slate-300">{fmt(row.cgst)}</td>
+                      <td className="px-4 py-2 text-right text-slate-300">{fmt(row.sgst)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-slate-700">
+                    <td className="px-4 py-2 text-slate-400 text-xs font-medium">Total</td>
+                    <td className="px-4 py-2 text-right text-slate-300">{hsnRows.reduce((s, r) => s + r.count, 0)}</td>
+                    <td className="px-4 py-2 text-right text-white font-semibold">{fmt(hsnRows.reduce((s, r) => s + r.taxable, 0))}</td>
+                    <td className="px-4 py-2 text-right text-slate-300">{fmt(hsnRows.reduce((s, r) => s + r.igst, 0))}</td>
+                    <td className="px-4 py-2 text-right text-slate-300">{fmt(hsnRows.reduce((s, r) => s + r.cgst, 0))}</td>
+                    <td className="px-4 py-2 text-right text-slate-300">{fmt(hsnRows.reduce((s, r) => s + r.sgst, 0))}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {!ret && !computing && (
