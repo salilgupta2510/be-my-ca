@@ -10,8 +10,11 @@ import { toast } from "sonner";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const PERIOD = "2025-01";
-const CACHE_KEY = `invoices:inward:${PERIOD}`;
+
+function getPeriod() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("bemyca_period") ?? "";
+}
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH() { return { Authorization: `Bearer ${token()}` }; }
@@ -43,7 +46,9 @@ function ListSkeleton() {
 }
 
 export default function InwardListPage() {
-  const cached = cacheGet<Invoice[]>(CACHE_KEY);
+  const [period] = useState(getPeriod);
+  const cacheKey = `invoices:inward:${period}`;
+  const cached = cacheGet<Invoice[]>(cacheKey);
   const [invoices, setInvoices] = useState<Invoice[]>(cached ?? []);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(!cached);
@@ -51,16 +56,16 @@ export default function InwardListPage() {
   useEffect(() => {
     async function load(silent: boolean) {
       if (!silent) setLoading(true);
-      const res = await fetch(`${API}/invoices/inward?period=${PERIOD}`, { headers: authH() });
+      const res = await fetch(`${API}/invoices/inward?period=${period}`, { headers: authH() });
       if (res.ok) {
         const data = await res.json();
         setInvoices(data);
-        cacheSet(CACHE_KEY, data);
+        cacheSet(cacheKey, data);
       }
       setLoading(false);
     }
     load(!!cached);
-  }, []);
+  }, [period]);
 
   async function del(id: string) {
     if (!confirm("Delete this invoice?")) return;
@@ -69,7 +74,7 @@ export default function InwardListPage() {
       toast.success("Deleted");
       const updated = invoices.filter(i => i.id !== id);
       setInvoices(updated);
-      cacheSet(CACHE_KEY, updated);
+      cacheSet(cacheKey, updated);
     } else toast.error("Delete failed");
   }
 
@@ -85,7 +90,7 @@ export default function InwardListPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Purchase Invoices</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Period: {PERIOD}</p>
+          <p className="text-slate-400 text-sm mt-0.5">Period: {period}</p>
         </div>
         <Link href="/invoices/inward/new">
           <Button className="bg-blue-600 hover:bg-blue-700">

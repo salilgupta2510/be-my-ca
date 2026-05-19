@@ -10,7 +10,11 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const PERIOD = "2025-01";
+
+function getPeriod() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("bemyca_period") ?? "";
+}
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -39,6 +43,7 @@ interface DraftValues {
 
 export default function NewOutwardPage() {
   const router = useRouter();
+  const [period] = useState(getPeriod);
   const [tab, setTab] = useState<"upload" | "manual">("upload");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -61,7 +66,7 @@ export default function NewOutwardPage() {
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await fetch(`${API}/invoices/outward/upload?period=${PERIOD}`, {
+      const res = await fetch(`${API}/invoices/outward/upload?period=${period}`, {
         method: "POST", headers: authH(), body: fd,
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "Upload failed");
@@ -91,7 +96,7 @@ export default function NewOutwardPage() {
     setSaving(true);
     try {
       const body = {
-        period: PERIOD,
+        period: period,
         invoice_number: form.invoice_number,
         invoice_date: form.invoice_date,
         customer_name: form.customer_name,

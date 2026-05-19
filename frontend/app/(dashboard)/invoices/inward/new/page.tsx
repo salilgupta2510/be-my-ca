@@ -10,7 +10,11 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const PERIOD = "2025-01";
+
+function getPeriod() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("bemyca_period") ?? "";
+}
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -21,6 +25,7 @@ function authH(json = false) {
 
 export default function NewInwardPage() {
   const router = useRouter();
+  const [period] = useState(getPeriod);
   const [form, setForm] = useState({
     supplier_name: "", supplier_gstin: "",
     invoice_number: "", invoice_date: "",
@@ -37,7 +42,7 @@ export default function NewInwardPage() {
         method: "POST",
         headers: authH(true),
         body: JSON.stringify({
-          period: PERIOD,
+          period: period,
           supplier_name: form.supplier_name,
           supplier_gstin: form.supplier_gstin || null,
           invoice_number: form.invoice_number,
