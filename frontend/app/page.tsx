@@ -196,7 +196,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.04) 50%, transparent 100%)" }} />
         <div className="relative max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-center gap-6 text-slate-400 text-sm">
-          {["GSTIN validated", "Bank-grade encryption", "Auto GSTR-2B sync", "Deadline reminders"].map((t) => (
+          {["GSTIN validated", "PDF invoices", "Auto GSTR-2B sync", "HSN summary (Table 12)", "Late fee calculator"].map((t) => (
             <span key={t} className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-amber-500" /> {t}
             </span>
@@ -215,11 +215,11 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
             { step: "01", icon: Upload, title: "Upload your invoices", color: "text-amber-400", iconBg: "rgba(245,158,11,0.10)",
-              desc: "Photograph your sales bills and purchase invoices. Our AI reads the amounts, GSTIN, and invoice numbers automatically." },
+              desc: "Photograph sales bills and purchase invoices. Our AI reads amounts, GSTIN, HSN codes, and invoice numbers automatically. Or type them in — your choice. Export any list to CSV." },
             { step: "02", icon: BarChart3, title: "We compute your returns", color: "text-violet-400", iconBg: "rgba(139,92,246,0.10)",
-              desc: "BeMyCa calculates your GSTR-1 and GSTR-3B, reconciles purchases against supplier filings, and shows exactly what you owe." },
-            { step: "03", icon: ShieldCheck, title: "File with one click", color: "text-emerald-400", iconBg: "rgba(16,185,129,0.10)",
-              desc: "Review the computed figures, check your ITC, and file — or export for your CA. No portal login juggling." },
+              desc: "BeMyCa calculates GSTR-1 (with HSN Table 12 summary), GSTR-3B, and GSTR-9 annual return. Reconciles purchases against GSTR-2B. Shows exactly what you owe and your ITC balance." },
+            { step: "03", icon: ShieldCheck, title: "File with confidence", color: "text-emerald-400", iconBg: "rgba(16,185,129,0.10)",
+              desc: "Review computed figures, download PDF invoices for your records, check the ITC Ledger for running credit balance, calculate any late fee before paying. Export to CA or file directly." },
           ].map((item) => (
             <div key={item.step}
               className="card-hover relative rounded-2xl p-8 border border-slate-800"
@@ -252,16 +252,22 @@ export default function LandingPage() {
             {[
               { icon: Upload, color: "text-amber-400", iconBg: "rgba(245,158,11,0.10)", title: "AI Invoice Reader",
                 desc: "Photograph any bill. Claude AI extracts invoice number, GSTIN, taxable value, IGST, CGST, SGST — even from crumpled receipts." },
-              { icon: FileText, color: "text-violet-400", iconBg: "rgba(139,92,246,0.10)", title: "GSTR-1 Computation",
-                desc: "Automatically categorises your sales into B2B, B2C, exports, and credit notes. Section-wise breakdown ready to verify." },
+              { icon: FileText, color: "text-violet-400", iconBg: "rgba(139,92,246,0.10)", title: "GSTR-1 with HSN Summary",
+                desc: "Auto-categorises sales into B2B, B2C, exports, credit notes. Includes Table 12 HSN/SAC summary — grouped, totalled, ready to verify." },
               { icon: BarChart3, color: "text-cyan-400", iconBg: "rgba(6,182,212,0.08)", title: "GSTR-2B Reconciliation",
-                desc: "Compares your purchase register against supplier-filed GSTR-2B. Flags missing invoices before you lose ITC credit." },
-              { icon: Zap, color: "text-amber-300", iconBg: "rgba(245,158,11,0.08)", title: "GSTR-3B & Net Tax",
-                desc: "Subtracts eligible ITC from output tax liability. Shows exactly how much cash to transfer to the GST portal." },
-              { icon: Clock, color: "text-orange-400", iconBg: "rgba(249,115,22,0.08)", title: "Deadline Tracker",
-                desc: "Traffic-light alerts for GSTR-1 (11th) and GSTR-3B (20th). Never pay a late fee again." },
-              { icon: ShieldCheck, color: "text-emerald-400", iconBg: "rgba(16,185,129,0.08)", title: "Secure & Compliant",
-                desc: "Your data stays encrypted. GSTIN validation on every invoice. Audit-ready records stored forever." },
+                desc: "Compares your purchase register against supplier-filed GSTR-2B. Flags missing invoices and amount mismatches before you lose ITC credit." },
+              { icon: Zap, color: "text-amber-300", iconBg: "rgba(245,158,11,0.08)", title: "GSTR-3B & ITC Ledger",
+                desc: "Computes net tax payable after ITC. 12-month ledger tracks ITC available, claimed, net cash paid, and running credit balance across periods." },
+              { icon: Clock, color: "text-orange-400", iconBg: "rgba(249,115,22,0.08)", title: "GSTR-9 Annual Return",
+                desc: "One-click aggregation of all 12 monthly returns into GSTR-9. Month-wise breakdown with GSTR-1 and GSTR-3B filing status per period." },
+              { icon: ShieldCheck, color: "text-emerald-400", iconBg: "rgba(16,185,129,0.08)", title: "Late Fee & Interest Calculator",
+                desc: "Instantly compute late fee (₹50/day, capped ₹10,000) and 18% p.a. interest on delayed payments. Works for GSTR-1 and GSTR-3B." },
+              { icon: Upload, color: "text-pink-400", iconBg: "rgba(236,72,153,0.08)", title: "PDF Invoice Generation",
+                desc: "Download any sales invoice as a professional PDF — business name, GSTIN, HSN code, tax breakdowns, grand total. No extra software needed." },
+              { icon: BarChart3, color: "text-blue-400", iconBg: "rgba(59,130,246,0.08)", title: "6-Month Trend Dashboard",
+                desc: "Visual chart of tax liability, ITC, and turnover over the past 6 months. Spot patterns and plan cash flow before the filing deadline." },
+              { icon: ShieldCheck, color: "text-slate-400", iconBg: "rgba(100,116,139,0.08)", title: "CSV Export & GSTIN Validation",
+                desc: "Export any invoice list to CSV with one click. Real-time GSTIN format validation on every form — catch errors before they cause rejections." },
             ].map((f) => (
               <div key={f.title}
                 className="card-hover rounded-xl p-6 border border-slate-800"
@@ -430,7 +436,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-slate-800/40 mt-8 pt-8 flex flex-col sm:flex-row justify-between gap-3 text-slate-600 text-xs">
-            <p>© 2025 BeMyCa. All rights reserved.</p>
+            <p>© 2026 BeMyCa. All rights reserved.</p>
             <p>Made in India for Indian businesses</p>
           </div>
         </div>

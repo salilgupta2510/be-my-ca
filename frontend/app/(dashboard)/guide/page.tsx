@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Printer, CheckCircle2, FileText, ArrowUpCircle, ArrowDownCircle,
-  GitMerge, ReceiptText, AlertTriangle, Clock
+  GitMerge, ReceiptText, AlertTriangle, Clock,
+  Calculator, BookOpen, Download, TrendingUp
 } from "lucide-react";
 
 const steps = [
@@ -103,6 +104,70 @@ const steps = [
     ],
     warning: "Always run GSTR-2B reconciliation before computing GSTR-3B. Without it, ITC will be ₹0.",
   },
+  {
+    num: 7,
+    title: "Download PDF invoices & export CSV",
+    icon: Download,
+    color: "text-pink-400",
+    bg: "bg-pink-950/40",
+    desc: "Generate professional PDF invoices for any sales entry, and export full invoice lists to CSV.",
+    actions: [
+      'Go to Invoices → Sales. Each invoice row has a download icon — click it to get a PDF.',
+      'PDF includes business name, GSTIN, customer details, HSN code, IGST/CGST/SGST breakdown, and grand total.',
+      'Click "Export CSV" to download all invoices for the period as a spreadsheet.',
+      'Same CSV export is available on the Purchases list.',
+    ],
+    tip: "Use PDF invoices for customer copies. Use CSV export to share with your CA or import into Excel.",
+  },
+  {
+    num: 8,
+    title: "Review your ITC Ledger",
+    icon: BookOpen,
+    color: "text-cyan-400",
+    bg: "bg-cyan-950/40",
+    desc: "The ITC Ledger shows 12 months of ITC availability, utilization, and net cash paid — in one table.",
+    actions: [
+      'Go to ITC Ledger in the sidebar.',
+      'ITC Available = total GST on purchase invoices for the period.',
+      'ITC Claimed = ITC set off in GSTR-3B.',
+      'Net Cash Paid = Tax Liability − ITC Claimed.',
+      'Running Balance = cumulative unclaimed ITC that carries forward.',
+    ],
+    tip: "If Running Balance is high, you may be over-purchasing or under-utilizing ITC. Check with your CA.",
+  },
+  {
+    num: 9,
+    title: "Compute GSTR-9 Annual Return",
+    icon: TrendingUp,
+    color: "text-orange-400",
+    bg: "bg-orange-950/40",
+    desc: "GSTR-9 aggregates all 12 months of outward supplies, ITC, and tax paid into one annual return.",
+    actions: [
+      'Go to Returns → GSTR-9 Annual.',
+      'Select the financial year (e.g., 2025-26).',
+      'Click "Compute GSTR-9" — it pulls data from all monthly GSTR-1 and GSTR-3B returns.',
+      'Review Table 4 (outward by type: B2B, B2C, exports) and month-wise breakdown.',
+      'Check filing status per month — filed / pending shown for GSTR-1 and GSTR-3B.',
+    ],
+    warning: "GSTR-9 is due by 31 December following the end of the financial year. Late fee: ₹200/day (₹100 CGST + ₹100 SGST), capped at 0.25% of turnover.",
+    tip: "Verify GSTR-9 figures against your GST portal data before submitting. Discrepancies between portal and BeMyCa likely mean some invoices weren't entered.",
+  },
+  {
+    num: 10,
+    title: "Calculate late fee & interest before paying",
+    icon: Calculator,
+    color: "text-amber-400",
+    bg: "bg-amber-950/40",
+    desc: "If you've missed a filing deadline, use the built-in calculator before logging into the portal.",
+    actions: [
+      'Go to Tools → Late Fee & Interest in the sidebar.',
+      'Select return type (GSTR-1 or GSTR-3B), enter the tax period and actual filing date.',
+      'For GSTR-3B, also enter tax payable to calculate 18% p.a. interest.',
+      'Check the "Nil return" box if you had no transactions — lower fee (₹20/day vs ₹50/day).',
+      'Late fee is capped at ₹10,000 total (₹5,000 CGST + ₹5,000 SGST) under current amendments.',
+    ],
+    tip: "Always calculate the exact amount before making payment on the GST portal to avoid under-payment interest.",
+  },
 ];
 
 const faq = [
@@ -129,6 +194,18 @@ const faq = [
   {
     q: "What if I miss the filing deadline?",
     a: "Late fee: ₹50/day (₹25 CGST + ₹25 SGST) for returns with tax liability. ₹20/day for nil returns. Plus interest at 18% p.a. on unpaid tax.",
+  },
+  {
+    q: "What is HSN / SAC code?",
+    a: "Harmonised System of Nomenclature (HSN) for goods, Services Accounting Code (SAC) for services. Required on invoices above ₹5 lakh turnover (4-digit code) or ₹1.5 crore (8-digit code). BeMyCa groups your invoices by HSN in GSTR-1 Table 12 automatically.",
+  },
+  {
+    q: "What is GSTR-9?",
+    a: "The annual return summarising all 12 months of outward supplies, ITC claimed, and tax paid. Due 31 December after the financial year ends. It must match your monthly GSTR-1 and GSTR-3B filings.",
+  },
+  {
+    q: "What is Reverse Charge Mechanism (RCM)?",
+    a: "Under RCM, the buyer (not the seller) pays the GST directly to the government. Common for purchases from unregistered dealers or specific services (legal, freight). Mark RCM invoices using the Reverse Charge checkbox when adding purchase invoices.",
   },
 ];
 
@@ -163,6 +240,8 @@ export default function GuidePage() {
               { label: "File GSTR-1 by 11th", color: "bg-green-900 text-green-300" },
               { label: "→", color: "" },
               { label: "File GSTR-3B by 20th", color: "bg-yellow-900 text-yellow-300" },
+              { label: "→", color: "" },
+              { label: "GSTR-9 by Dec 31 (annual)", color: "bg-orange-900 text-orange-300" },
             ].map((item, i) =>
               item.color ? (
                 <Badge key={i} className={`${item.color} text-xs`}>{item.label}</Badge>
@@ -246,7 +325,7 @@ export default function GuidePage() {
       </div>
 
       <div className="text-center text-slate-600 text-xs pb-6">
-        BeMyCa · GST Filing Assistant · bemyca.cloud · 2025
+        BeMyCa · GST Filing Assistant · bemyca.cloud · 2026
       </div>
     </div>
   );
