@@ -14,7 +14,12 @@ function authH(json = false) {
   if (json) h["Content-Type"] = "application/json";
   return h;
 }
-function fmt(n: number | string) { return "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2 }); }
+function fmt(n: number | string | undefined | null) {
+  if (n === undefined || n === null) return "₹0.00";
+  const num = Number(n);
+  if (isNaN(num)) return "₹0.00";
+  return "₹" + num.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+}
 
 function currentFY(): string {
   const now = new Date();
@@ -37,22 +42,30 @@ function fyOptions(): string[] {
   return fys;
 }
 
-interface PeriodBreakdown {
-  period: string; outward_taxable: number; outward_tax: number; itc_available: number; itc_claimed: number;
+interface ByTypeEntry { count: number; taxable_value: number; igst: number; cgst: number; sgst: number; }
+interface PeriodWiseEntry {
+  outward_count: number; outward_taxable: number; outward_tax: number;
+  inward_count: number; inward_itc: number; tax_paid: number;
+  gstr1_filed: boolean; gstr3b_filed: boolean;
 }
-
 interface GSTR9Payload {
-  fy: string;
-  total_outward_taxable: number; total_outward_tax: number;
-  total_itc_available: number; total_itc_claimed: number;
-  net_tax_payable: number;
-  outward_by_type: Record<string, { taxable: number; tax: number; count: number }>;
-  period_breakdown: PeriodBreakdown[];
+  financial_year: string;
+  periods: string[];
+  outward_supplies: {
+    by_type: Record<string, ByTypeEntry>;
+    total_taxable_value: number; total_igst: number; total_cgst: number;
+    total_sgst: number; total_tax: number; invoice_count: number;
+  };
+  inward_supplies: { total_igst: number; total_cgst: number; total_sgst: number; total_itc: number; invoice_count: number; };
+  returns_summary: {
+    gstr1_filed_count: number; gstr3b_filed_count: number;
+    gstr1_total: number; gstr3b_total: number;
+    tax_paid_via_gstr3b: number; itc_claimed_via_gstr3b: number;
+  };
+  period_wise: Record<string, PeriodWiseEntry>;
 }
 
-interface GSTR9Return {
-  id: string; period: string; status: string; computed_payload: GSTR9Payload | null;
-}
+interface GSTR9Return { id: string; period: string; status: string; computed_payload: GSTR9Payload | null; }
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "border-slate-600 text-slate-400",
@@ -62,7 +75,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const TYPE_LABELS: Record<string, string> = {
   b2b: "B2B (Registered)", b2c_large: "B2C Large", b2c_small: "B2C Small",
-  exports: "Exports", credit_notes: "Credit Notes",
+  export: "Exports", credit_note: "Credit Notes",
 };
 
 function periodLabel(p: string) {
@@ -112,6 +125,9 @@ export default function GSTR9Page() {
   }
 
   const payload = ret?.computed_payload;
+  const out = payload?.outward_supplies;
+  const inn = payload?.inward_supplies;
+  const rs = payload?.returns_summary;
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -144,7 +160,7 @@ export default function GSTR9Page() {
         </div>
       </div>
 
-      {!payload && !computing && (
+      {!payload && !computing && !fetching && (
         <Card className="bg-slate-900 border-slate-800">
           <CardContent className="p-12 text-center">
             <p className="text-slate-400 text-sm">No GSTR-9 computed for FY {fy}.</p>
@@ -153,15 +169,15 @@ export default function GSTR9Page() {
         </Card>
       )}
 
-      {payload && (
+      {payload && out && inn && rs && (
         <>
           {/* Summary tiles */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[
-              { label: "Outward Taxable", value: fmt(payload.total_outward_taxable) },
-              { label: "Output Tax", value: fmt(payload.total_outward_tax) },
-              { label: "ITC Available", value: fmt(payload.total_itc_available) },
-              { label: "Net Tax Payable", value: fmt(payload.net_tax_payable) },
+              { label: "Outward Taxable", value: fmt(out.total_taxable_value) },
+              { label: "Output Tax", value: fmt(out.total_tax) },
+              { label: "ITC Available", value: fmt(inn.total_itc) },
+              { label: "Tax Paid (via 3B)", value: fmt(rs.tax_paid_via_gstr3b) },
             ].map(s => (
               <Card key={s.label} className="bg-slate-900 border-slate-800">
                 <CardContent className="p-4">
@@ -172,8 +188,27 @@ export default function GSTR9Page() {
             ))}
           </div>
 
+          {/* Returns filing summary */}
+          <Card className="bg-slate-900 border-slate-800">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                {[
+                  { label: "GSTR-1 Filed", value: `${rs.gstr1_filed_count} / ${rs.gstr1_total}` },
+                  { label: "GSTR-3B Filed", value: `${rs.gstr3b_filed_count} / ${rs.gstr3b_total}` },
+                  { label: "ITC Claimed (3B)", value: fmt(rs.itc_claimed_via_gstr3b) },
+                  { label: "Invoices (Outward)", value: String(out.invoice_count) },
+                ].map(s => (
+                  <div key={s.label}>
+                    <p className="text-slate-400 text-xs">{s.label}</p>
+                    <p className="text-white font-medium mt-0.5">{s.value}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Outward by type */}
-          {payload.outward_by_type && Object.keys(payload.outward_by_type).length > 0 && (
+          {out.by_type && Object.keys(out.by_type).length > 0 && (
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm">Table 4 — Outward Supplies by Type</CardTitle>
@@ -186,16 +221,20 @@ export default function GSTR9Page() {
                         <th className="text-left text-slate-400 text-xs font-medium px-4 py-2">Type</th>
                         <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">Count</th>
                         <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">Taxable Value</th>
-                        <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">Tax</th>
+                        <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">IGST</th>
+                        <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">CGST</th>
+                        <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">SGST</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(payload.outward_by_type).map(([type, data]) => (
+                      {Object.entries(out.by_type).filter(([, d]) => d.count > 0).map(([type, data]) => (
                         <tr key={type} className="border-b border-slate-800/50 last:border-0">
                           <td className="px-4 py-2 text-slate-300">{TYPE_LABELS[type] ?? type}</td>
                           <td className="px-4 py-2 text-right text-white">{data.count}</td>
-                          <td className="px-4 py-2 text-right text-white">{fmt(data.taxable)}</td>
-                          <td className="px-4 py-2 text-right text-slate-300">{fmt(data.tax)}</td>
+                          <td className="px-4 py-2 text-right text-white">{fmt(data.taxable_value)}</td>
+                          <td className="px-4 py-2 text-right text-slate-300">{fmt(data.igst)}</td>
+                          <td className="px-4 py-2 text-right text-slate-300">{fmt(data.cgst)}</td>
+                          <td className="px-4 py-2 text-right text-slate-300">{fmt(data.sgst)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -205,8 +244,8 @@ export default function GSTR9Page() {
             </Card>
           )}
 
-          {/* Period breakdown */}
-          {payload.period_breakdown?.length > 0 && (
+          {/* Period-wise breakdown */}
+          {payload.period_wise && Object.keys(payload.period_wise).length > 0 && (
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm">Month-wise Breakdown</CardTitle>
@@ -219,30 +258,33 @@ export default function GSTR9Page() {
                         <th className="text-left text-slate-400 text-xs font-medium px-4 py-2">Month</th>
                         <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">Taxable</th>
                         <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">Output Tax</th>
-                        <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">ITC Available</th>
-                        <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">ITC Claimed</th>
+                        <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">ITC</th>
+                        <th className="text-right text-slate-400 text-xs font-medium px-4 py-2">Tax Paid</th>
+                        <th className="text-center text-slate-400 text-xs font-medium px-4 py-2">GSTR-1</th>
+                        <th className="text-center text-slate-400 text-xs font-medium px-4 py-2">GSTR-3B</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {payload.period_breakdown.map(pb => (
-                        <tr key={pb.period} className="border-b border-slate-800/50 last:border-0">
-                          <td className="px-4 py-2 text-slate-300 font-mono text-xs">{periodLabel(pb.period)}</td>
-                          <td className="px-4 py-2 text-right text-white">{fmt(pb.outward_taxable)}</td>
-                          <td className="px-4 py-2 text-right text-white">{fmt(pb.outward_tax)}</td>
-                          <td className="px-4 py-2 text-right text-green-400">{fmt(pb.itc_available)}</td>
-                          <td className="px-4 py-2 text-right text-blue-400">{fmt(pb.itc_claimed)}</td>
+                      {Object.entries(payload.period_wise).map(([p, d]) => (
+                        <tr key={p} className="border-b border-slate-800/50 last:border-0">
+                          <td className="px-4 py-2 text-slate-300 font-mono text-xs">{periodLabel(p)}</td>
+                          <td className="px-4 py-2 text-right text-white">{fmt(d.outward_taxable)}</td>
+                          <td className="px-4 py-2 text-right text-white">{fmt(d.outward_tax)}</td>
+                          <td className="px-4 py-2 text-right text-green-400">{fmt(d.inward_itc)}</td>
+                          <td className="px-4 py-2 text-right text-blue-400">{fmt(d.tax_paid)}</td>
+                          <td className="px-4 py-2 text-center">
+                            <span className={d.gstr1_filed ? "text-green-400 text-xs" : "text-slate-500 text-xs"}>
+                              {d.gstr1_filed ? "Filed" : "Pending"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <span className={d.gstr3b_filed ? "text-green-400 text-xs" : "text-slate-500 text-xs"}>
+                              {d.gstr3b_filed ? "Filed" : "Pending"}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot>
-                      <tr className="border-t border-slate-700 bg-slate-800/30">
-                        <td className="px-4 py-2 text-slate-300 text-xs font-medium">Total</td>
-                        <td className="px-4 py-2 text-right text-white font-semibold">{fmt(payload.total_outward_taxable)}</td>
-                        <td className="px-4 py-2 text-right text-white font-semibold">{fmt(payload.total_outward_tax)}</td>
-                        <td className="px-4 py-2 text-right text-green-400 font-semibold">{fmt(payload.total_itc_available)}</td>
-                        <td className="px-4 py-2 text-right text-blue-400 font-semibold">{fmt(payload.total_itc_claimed)}</td>
-                      </tr>
-                    </tfoot>
                   </table>
                 </div>
               </CardContent>
