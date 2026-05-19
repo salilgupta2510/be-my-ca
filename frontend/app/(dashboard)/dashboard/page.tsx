@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, FileText, PlusCircle, ReceiptText, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, FileText, Loader2, PlusCircle, ReceiptText, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
@@ -23,10 +23,21 @@ function fmt(n: number) {
 }
 
 interface Business { legal_name: string; gstin: string; state_code: string; return_frequency: string; }
-interface GSTR3BPayload { outward_tax_liability: { total: number }; itc_available: { total: number }; net_tax_payable: { total: number }; reconciliation_done: boolean; }
+interface GSTR3BPayload {
+  outward_tax_liability: { total: number };
+  itc_available: { total: number };
+  net_cash_payable: { total: number };
+  reconciliation_done: boolean;
+}
 interface GSTR3B { id: string; status: string; total_tax_payable: number; itc_claimed: number; computed_payload: GSTR3BPayload | null; }
 interface ReconSummary { matched: number; missing_in_2b: number; missing_in_books: number; amount_mismatch: number; }
-interface CacheData { business: Business | null; gstr3b: GSTR3B | null; recon: ReconSummary | null; }
+interface CacheData {
+  business: Business | null;
+  gstr3b: GSTR3B | null;
+  recon: ReconSummary | null;
+  outCount: number | null;
+  inCount: number | null;
+}
 
 function filingDeadline(day: number) {
   const now = new Date();
@@ -36,6 +47,10 @@ function filingDeadline(day: number) {
   if (diff === 0) return { label: "Due today", color: "bg-red-500" };
   if (diff <= 3) return { label: `${diff}d left`, color: "bg-orange-500" };
   return { label: `${diff}d left`, color: "bg-green-700" };
+}
+
+function Spin({ className = "" }: { className?: string }) {
+  return <Loader2 className={`animate-spin shrink-0 ${className}`} />;
 }
 
 function DashboardSkeleton() {
@@ -65,28 +80,46 @@ export default function DashboardPage() {
   const [business, setBusiness] = useState<Business | null>(cached?.business ?? null);
   const [gstr3b, setGstr3b] = useState<GSTR3B | null>(cached?.gstr3b ?? null);
   const [recon, setRecon] = useState<ReconSummary | null>(cached?.recon ?? null);
+  const [outCount, setOutCount] = useState<number | null>(cached?.outCount ?? null);
+  const [inCount, setInCount] = useState<number | null>(cached?.inCount ?? null);
   const [loading, setLoading] = useState(!cached);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     async function load(silent: boolean) {
       if (!silent) setLoading(true);
+      else setRefreshing(true);
       try {
-        const [bRes, reconRes] = await Promise.all([
+        const [bRes, reconRes, outRes, inRes] = await Promise.all([
           fetch(`${API}/business/me`, { headers: authHeaders() }),
           fetch(`${API}/gst/reconciliation/summary?period=${PERIOD}`, { headers: authHeaders() }),
+          fetch(`${API}/invoices/outward?period=${PERIOD}`, { headers: authHeaders() }),
+          fetch(`${API}/invoices/inward?period=${PERIOD}`, { headers: authHeaders() }),
         ]);
-        const bData = bRes.ok ? await bRes.json() : null;
-        const reconData = reconRes.ok ? await reconRes.json() : null;
+        const bData: Business | null = bRes.ok ? await bRes.json() : null;
+        const reconData: ReconSummary | null = reconRes.ok ? await reconRes.json() : null;
+        const outData = outRes.ok ? await outRes.json() : null;
+        const inData = inRes.ok ? await inRes.json() : null;
+
         if (bData) setBusiness(bData);
         if (reconData) setRecon(reconData);
+        if (outData) setOutCount(Array.isArray(outData) ? outData.length : 0);
+        if (inData) setInCount(Array.isArray(inData) ? inData.length : 0);
 
         const g3Res = await fetch(`${API}/returns/gstr3b?period=${PERIOD}`, { headers: authHeaders() });
-        const g3Data = g3Res.ok ? await g3Res.json() : null;
+        const g3Data: GSTR3B | null = g3Res.ok ? await g3Res.json() : null;
         if (g3Data) setGstr3b(g3Data);
 
-        cacheSet(CACHE_KEY, { business: bData, gstr3b: g3Data, recon: reconData });
+        cacheSet(CACHE_KEY, {
+          business: bData,
+          gstr3b: g3Data,
+          recon: reconData,
+          outCount: outData ? (Array.isArray(outData) ? outData.length : 0) : null,
+          inCount: inData ? (Array.isArray(inData) ? inData.length : 0) : null,
+        });
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     }
     load(!!cached);
@@ -97,12 +130,48 @@ export default function DashboardPage() {
   const gstr1Due = filingDeadline(11);
   const gstr3bDue = filingDeadline(20);
 
+  const stats = [
+    {
+      label: "Sales Invoices",
+      value: outCount !== null ? String(outCount) : "—",
+      icon: ReceiptText,
+      color: "text-blue-400",
+      bg: "bg-blue-950/40",
+      href: "/invoices/outward",
+    },
+    {
+      label: "Purchase Invoices",
+      value: inCount !== null ? String(inCount) : "—",
+      icon: FileText,
+      color: "text-purple-400",
+      bg: "bg-purple-950/40",
+      href: "/invoices/inward",
+    },
+    {
+      label: "Matched (GSTR-2B)",
+      value: recon ? String(recon.matched) : "—",
+      icon: CheckCircle2,
+      color: "text-green-400",
+      bg: "bg-green-950/40",
+      href: "/reconciliation/gst",
+    },
+    {
+      label: "ITC at Risk",
+      value: recon ? String(recon.missing_in_books + recon.amount_mismatch) + " invoices" : "—",
+      icon: AlertTriangle,
+      color: "text-red-400",
+      bg: "bg-red-950/40",
+      href: "/reconciliation/gst",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             {business?.legal_name ?? "Dashboard"}
+            {refreshing && <Spin className="w-4 h-4 text-slate-600" />}
           </h1>
           <p className="text-slate-400 text-sm mt-0.5">
             {business ? `GSTIN ${business.gstin} · ${PERIOD}` : PERIOD}
@@ -115,13 +184,15 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* GST liability card */}
       <Card className="bg-gradient-to-r from-blue-950 to-slate-900 border-blue-800">
         <CardContent className="p-6">
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
               <p className="text-slate-400 text-sm">GST to pay this month</p>
-              <p className="text-4xl font-bold text-white mt-1">
+              <p className="text-4xl font-bold text-white mt-1 flex items-center gap-2">
                 {gstr3b ? fmt(gstr3b.total_tax_payable) : "—"}
+                {refreshing && <Spin className="w-5 h-5 text-slate-600" />}
               </p>
               {gstr3b?.computed_payload && (
                 <div className="flex gap-6 mt-3 text-sm text-slate-400">
@@ -148,6 +219,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Deadline cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
           { label: "GSTR-1 (Outward Sales)", due: gstr1Due, desc: "11th of next month", href: "/returns/gstr1" },
@@ -168,20 +240,19 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Stat tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Sales Invoices", value: "—", icon: ReceiptText, color: "text-blue-400", bg: "bg-blue-950/40", href: "/invoices/outward" },
-          { label: "Purchase Invoices", value: "—", icon: FileText, color: "text-purple-400", bg: "bg-purple-950/40", href: "/invoices/inward" },
-          { label: "Matched (GSTR-2B)", value: recon ? String(recon.matched) : "—", icon: CheckCircle2, color: "text-green-400", bg: "bg-green-950/40", href: "/reconciliation/gst" },
-          { label: "ITC at Risk", value: recon ? String(recon.missing_in_books + recon.amount_mismatch) + " invoices" : "—", icon: AlertTriangle, color: "text-red-400", bg: "bg-red-950/40", href: "/reconciliation/gst" },
-        ].map((stat) => (
+        {stats.map((stat) => (
           <Link key={stat.label} href={stat.href}>
             <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors cursor-pointer">
               <CardContent className="p-5">
                 <div className={`w-10 h-10 ${stat.bg} rounded-lg flex items-center justify-center mb-3`}>
                   <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
+                <p className="text-2xl font-bold text-white flex items-center gap-1.5">
+                  {stat.value}
+                  {refreshing && <Spin className="w-3.5 h-3.5 text-slate-600" />}
+                </p>
                 <p className="text-slate-400 text-sm mt-0.5">{stat.label}</p>
               </CardContent>
             </Card>
@@ -189,6 +260,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Quick actions */}
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader className="pb-3">
           <CardTitle className="text-white text-base">Quick actions for {PERIOD}</CardTitle>
