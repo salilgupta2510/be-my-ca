@@ -27,17 +27,27 @@ export default function OnboardingPage() {
   const stateCode = gstin.length === 15 ? gstin.slice(0, 2) : "";
 
   useEffect(() => {
+    if (!token()) {
+      router.replace("/login");
+      return;
+    }
     fetch(`${API}/business/me`, {
       headers: { Authorization: `Bearer ${token()}` },
     }).then(async (res) => {
       if (!res.ok) return;
       const biz = await res.json();
+      // Already onboarded — go straight to dashboard unless explicitly editing
+      const isEditing = new URLSearchParams(window.location.search).get("edit") === "1";
+      if (!isEditing) {
+        router.replace("/dashboard");
+        return;
+      }
       setLegalName(biz.legal_name ?? "");
       setGstin(biz.gstin ?? "");
       setFrequency(biz.return_frequency ?? "monthly");
       setIsUpdate(true);
     }).catch(() => {});
-  }, []);
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

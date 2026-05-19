@@ -19,16 +19,16 @@ function authH(json = false) {
 
 // Realistic Indian GST sample invoices
 const SAMPLE_OUTWARD = [
-  { customer_name: "Tata Consultancy Services Ltd", customer_gstin: "27AAACT2727Q1ZW", invoice_number: "INV-2025-001", invoice_date: "2025-01-03", invoice_type: "b2b", taxable_value: "150000", igst: "0", cgst: "13500", sgst: "13500" },
-  { customer_name: "Infosys Limited", customer_gstin: "29AABCI1681H1ZT", invoice_number: "INV-2025-002", invoice_date: "2025-01-07", invoice_type: "b2b", taxable_value: "85000", igst: "15300", cgst: "0", sgst: "0" },
-  { customer_name: "Wipro Technologies", customer_gstin: "29AAACW0259L1ZV", invoice_number: "INV-2025-003", invoice_date: "2025-01-10", invoice_type: "b2b", taxable_value: "220000", igst: "39600", cgst: "0", sgst: "0" },
-  { customer_name: "Reliance Industries Ltd", customer_gstin: "27AAACR5055K1Z5", invoice_number: "INV-2025-004", invoice_date: "2025-01-12", invoice_type: "b2b", taxable_value: "75000", igst: "0", cgst: "6750", sgst: "6750" },
-  { customer_name: "Mahindra & Mahindra Ltd", customer_gstin: "27AAACM3025G1ZN", invoice_number: "INV-2025-005", invoice_date: "2025-01-15", invoice_type: "b2b", taxable_value: "180000", igst: "0", cgst: "16200", sgst: "16200" },
-  { customer_name: "HCL Technologies", customer_gstin: "06AAACH1099P1Z3", invoice_number: "INV-2025-006", invoice_date: "2025-01-18", invoice_type: "b2b", taxable_value: "95000", igst: "17100", cgst: "0", sgst: "0" },
-  { customer_name: "Retail Customer - Cash Sale", customer_gstin: null, invoice_number: "INV-2025-007", invoice_date: "2025-01-20", invoice_type: "b2c_small", taxable_value: "12000", igst: "0", cgst: "1080", sgst: "1080" },
-  { customer_name: "Export Client USA", customer_gstin: null, invoice_number: "INV-2025-008", invoice_date: "2025-01-22", invoice_type: "export", taxable_value: "300000", igst: "0", cgst: "0", sgst: "0" },
-  { customer_name: "Larsen & Toubro Ltd", customer_gstin: "27AAACL3043H1ZE", invoice_number: "INV-2025-009", invoice_date: "2025-01-25", invoice_type: "b2b", taxable_value: "420000", igst: "0", cgst: "37800", sgst: "37800" },
-  { customer_name: "B2C Large Customer - Kerala", customer_gstin: null, invoice_number: "INV-2025-010", invoice_date: "2025-01-28", invoice_type: "b2c_large", taxable_value: "280000", igst: "50400", cgst: "0", sgst: "0" },
+  { customer_name: "Tata Consultancy Services Ltd", customer_gstin: "27AAACT2727Q1ZW", invoice_number: "INV-2025-001", invoice_date: "2025-01-03", invoice_type: "b2b", taxable_value: "150000", igst: "0", cgst: "13500", sgst: "13500", place_of_supply: "27" },
+  { customer_name: "Infosys Limited", customer_gstin: "29AABCI1681H1ZT", invoice_number: "INV-2025-002", invoice_date: "2025-01-07", invoice_type: "b2b", taxable_value: "85000", igst: "15300", cgst: "0", sgst: "0", place_of_supply: "29" },
+  { customer_name: "Wipro Technologies", customer_gstin: "29AAACW0259L1ZV", invoice_number: "INV-2025-003", invoice_date: "2025-01-10", invoice_type: "b2b", taxable_value: "220000", igst: "39600", cgst: "0", sgst: "0", place_of_supply: "29" },
+  { customer_name: "Reliance Industries Ltd", customer_gstin: "27AAACR5055K1Z5", invoice_number: "INV-2025-004", invoice_date: "2025-01-12", invoice_type: "b2b", taxable_value: "75000", igst: "0", cgst: "6750", sgst: "6750", place_of_supply: "27" },
+  { customer_name: "Mahindra & Mahindra Ltd", customer_gstin: "27AAACM3025G1ZN", invoice_number: "INV-2025-005", invoice_date: "2025-01-15", invoice_type: "b2b", taxable_value: "180000", igst: "0", cgst: "16200", sgst: "16200", place_of_supply: "27" },
+  { customer_name: "HCL Technologies", customer_gstin: "06AAACH1099P1Z3", invoice_number: "INV-2025-006", invoice_date: "2025-01-18", invoice_type: "b2b", taxable_value: "95000", igst: "17100", cgst: "0", sgst: "0", place_of_supply: "06" },
+  { customer_name: "Retail Customer - Cash Sale", customer_gstin: null, invoice_number: "INV-2025-007", invoice_date: "2025-01-20", invoice_type: "b2c_small", taxable_value: "12000", igst: "0", cgst: "1080", sgst: "1080", place_of_supply: "27" },
+  { customer_name: "Export Client USA", customer_gstin: null, invoice_number: "INV-2025-008", invoice_date: "2025-01-22", invoice_type: "export", taxable_value: "300000", igst: "0", cgst: "0", sgst: "0", place_of_supply: "96" },
+  { customer_name: "Larsen & Toubro Ltd", customer_gstin: "27AAACL3043H1ZE", invoice_number: "INV-2025-009", invoice_date: "2025-01-25", invoice_type: "b2b", taxable_value: "420000", igst: "0", cgst: "37800", sgst: "37800", place_of_supply: "27" },
+  { customer_name: "B2C Large Customer - Kerala", customer_gstin: null, invoice_number: "INV-2025-010", invoice_date: "2025-01-28", invoice_type: "b2c_large", taxable_value: "280000", igst: "50400", cgst: "0", sgst: "0", place_of_supply: "32" },
 ];
 
 const SAMPLE_INWARD = [

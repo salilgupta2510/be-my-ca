@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown, BookOpen, FlaskConical } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
@@ -31,6 +31,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [invoicesOpen, setInvoicesOpen] = useState(
     pathname.startsWith("/invoices")
   );
+
+  useEffect(() => {
+    const token = localStorage.getItem("bemyca_token");
+    if (!token) {
+      router.replace("/login");
+    }
+  }, [router]);
 
   function handleLogout() {
     localStorage.removeItem("bemyca_token");

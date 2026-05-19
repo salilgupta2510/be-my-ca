@@ -30,9 +30,11 @@ interface GSTR3BReturn {
   computed_payload: {
     outward_tax_liability: { igst: number; cgst: number; sgst: number; cess: number; total: number; };
     itc_available: { igst: number; cgst: number; sgst: number; cess: number; total: number; };
-    net_tax_payable: { igst: number; cgst: number; sgst: number; cess: number; total: number; };
+    net_cash_payable: { igst: number; cgst: number; sgst: number; cess: number; total: number; };
     reconciliation_done: boolean;
     invoice_count: number;
+    itc_blocked_count?: number;
+    itc_expired_count?: number;
   } | null;
 }
 
@@ -222,7 +224,7 @@ export default function GSTR3BPage() {
           {[
             { title: "Outward Tax Liability", data: p.outward_tax_liability, color: "text-red-400" },
             { title: "ITC Available (from purchases)", data: p.itc_available, color: "text-green-400" },
-            { title: "Net Tax Payable", data: p.net_tax_payable, color: "text-blue-400" },
+            { title: "Net Tax Payable (Cash)", data: p.net_cash_payable, color: "text-blue-400" },
           ].map(({ title, data, color }) => (
             <Card key={title} className="bg-slate-900 border-slate-800">
               <CardHeader className="pb-2">
