@@ -165,7 +165,8 @@ export default function DashboardPage() {
     load(!!cached);
   }, [period]);
 
-  function handlePeriodChange(value: string) {
+  function handlePeriodChange(value: string | null) {
+    if (!value) return;
     setPeriod(value);
     if (typeof window !== "undefined") {
       localStorage.setItem("bemyca_period", value);
