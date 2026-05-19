@@ -18,6 +18,7 @@ class OutwardInvoiceCreate(BaseModel):
     cgst: Decimal = Decimal("0")
     sgst: Decimal = Decimal("0")
     cess: Decimal = Decimal("0")
+    hsn_code: str | None = None
 
 
 class OutwardInvoiceUpdate(OutwardInvoiceCreate):
@@ -41,6 +42,7 @@ class OutwardInvoiceOut(BaseModel):
     cgst: Decimal
     sgst: Decimal
     cess: Decimal
+    hsn_code: str | None
     source: InvoiceSource
     created_at: datetime
 
@@ -55,6 +57,9 @@ class InwardInvoiceCreate(BaseModel):
     igst: Decimal = Decimal("0")
     cgst: Decimal = Decimal("0")
     sgst: Decimal = Decimal("0")
+    hsn_code: str | None = None
+    is_rcm: bool = False
+    itc_blocked_reason: str | None = None
 
 
 class InwardInvoiceUpdate(InwardInvoiceCreate):
@@ -75,5 +80,8 @@ class InwardInvoiceOut(BaseModel):
     igst: Decimal
     cgst: Decimal
     sgst: Decimal
+    hsn_code: str | None
+    is_rcm: bool
+    itc_blocked_reason: str | None
     source: str
     created_at: datetime

@@ -31,6 +31,7 @@ async def create_business(
         existing.state_code = state_code
         existing.pan = pan
         existing.return_frequency = body.return_frequency
+        existing.is_composition = body.is_composition
         await db.commit()
         await db.refresh(existing)
         return existing
@@ -43,6 +44,7 @@ async def create_business(
         state_code=state_code,
         pan=pan,
         return_frequency=body.return_frequency,
+        is_composition=body.is_composition,
     )
     db.add(business)
     await db.commit()

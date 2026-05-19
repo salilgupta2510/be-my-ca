@@ -1,7 +1,7 @@
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import String, DateTime, Enum as SAEnum, ForeignKey
+from sqlalchemy import String, DateTime, Enum as SAEnum, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
@@ -25,4 +25,5 @@ class Business(Base):
         SAEnum(ReturnFrequency, values_callable=lambda x: [e.value for e in x]),
         default=ReturnFrequency.MONTHLY,
     )
+    is_composition: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

@@ -2,7 +2,7 @@ import uuid
 import enum
 from datetime import datetime, date, timezone
 from decimal import Decimal
-from sqlalchemy import String, Numeric, Date, DateTime, Enum as SAEnum, ForeignKey, Text
+from sqlalchemy import String, Numeric, Date, DateTime, Enum as SAEnum, ForeignKey, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
@@ -46,6 +46,7 @@ class OutwardInvoice(Base):
         SAEnum(InvoiceSource, values_callable=lambda x: [e.value for e in x]),
         default=InvoiceSource.MANUAL,
     )
+    hsn_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
     raw_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
@@ -64,5 +65,8 @@ class InwardInvoice(Base):
     igst: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
     cgst: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
     sgst: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
+    hsn_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    is_rcm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    itc_blocked_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
     source: Mapped[str] = mapped_column(String(50), default="manual")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

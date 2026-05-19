@@ -11,6 +11,7 @@ from app.core.database import Base
 class ReturnType(str, enum.Enum):
     GSTR1 = "gstr1"
     GSTR3B = "gstr3b"
+    GSTR4 = "gstr4"
 
 
 class ReturnStatus(str, enum.Enum):

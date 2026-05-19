@@ -9,6 +9,7 @@ class BusinessCreate(BaseModel):
     legal_name: str
     gstin: str
     return_frequency: ReturnFrequency = ReturnFrequency.MONTHLY
+    is_composition: bool = False
 
     @field_validator("gstin")
     @classmethod
@@ -29,4 +30,5 @@ class BusinessOut(BaseModel):
     state_code: str
     pan: str
     return_frequency: ReturnFrequency
+    is_composition: bool
     created_at: datetime

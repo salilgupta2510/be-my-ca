@@ -17,7 +17,7 @@ const NAV = [
   { href: "/returns/gstr1", label: "GSTR-1", icon: FileText },
   { href: "/returns/gstr3b", label: "GSTR-3B", icon: FileText },
   { href: "/guide", label: "User Guide", icon: BookOpen },
-  { href: "/sample-data", label: "Sample Data", icon: FlaskConical },
+  { href: "/seed", label: "Sample Data", icon: FlaskConical },
 ];
 
 type NavItem =
