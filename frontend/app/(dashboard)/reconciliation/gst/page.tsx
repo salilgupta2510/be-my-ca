@@ -10,8 +10,11 @@ import { toast } from "sonner";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const PERIOD = "2025-01";
-const CACHE_KEY = `reconciliation:${PERIOD}`;
+
+function getPeriod() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("bemyca_period") ?? "";
+}
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -57,7 +60,9 @@ function TableSkeleton() {
 }
 
 export default function GSTReconciliationPage() {
-  const cached = cacheGet<ReconRow[]>(CACHE_KEY);
+  const [period] = useState(getPeriod);
+  const cacheKey = `reconciliation:${period}`;
+  const cached = cacheGet<ReconRow[]>(cacheKey);
   const [rows, setRows] = useState<ReconRow[]>(cached ?? []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -67,27 +72,27 @@ export default function GSTReconciliationPage() {
   useEffect(() => {
     async function load(silent: boolean) {
       if (!silent) setLoading(true);
-      const res = await fetch(`${API}/gst/reconciliation/results?period=${PERIOD}`, { headers: authH() });
+      const res = await fetch(`${API}/gst/reconciliation/results?period=${period}`, { headers: authH() });
       if (res.ok) {
         const data = await res.json();
         setRows(data);
-        cacheSet(CACHE_KEY, data);
+        cacheSet(cacheKey, data);
       }
       setLoading(false);
     }
     load(!!cached);
-  }, []);
+  }, [period]);
 
   async function runRecon() {
     setRunning(true);
     try {
-      const res = await fetch(`${API}/gst/reconciliation/run?period=${PERIOD}`, { method: "POST", headers: authH(true) });
+      const res = await fetch(`${API}/gst/reconciliation/run?period=${period}`, { method: "POST", headers: authH(true) });
       if (!res.ok) throw new Error((await res.json()).detail ?? "Reconciliation failed");
-      const res2 = await fetch(`${API}/gst/reconciliation/results?period=${PERIOD}`, { headers: authH() });
+      const res2 = await fetch(`${API}/gst/reconciliation/results?period=${period}`, { headers: authH() });
       if (res2.ok) {
         const data = await res2.json();
         setRows(data);
-        cacheSet(CACHE_KEY, data);
+        cacheSet(cacheKey, data);
       }
       toast.success("Reconciliation complete");
     } catch (e: unknown) {
@@ -102,7 +107,7 @@ export default function GSTReconciliationPage() {
     if (res.ok) {
       const updated = rows.map(row => row.id === id ? { ...row, ims_action: action } : row);
       setRows(updated);
-      cacheSet(CACHE_KEY, updated);
+      cacheSet(cacheKey, updated);
       toast.success(`Invoice ${action}ed`);
     } else toast.error("Action failed");
   }
@@ -120,7 +125,7 @@ export default function GSTReconciliationPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">GSTR-2B Reconciliation</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Your purchases vs what suppliers filed · Period: {PERIOD}</p>
+          <p className="text-slate-400 text-sm mt-0.5">Your purchases vs what suppliers filed · Period: {period}</p>
         </div>
         <Button onClick={runRecon} disabled={running} className="bg-blue-600 hover:bg-blue-700">
           {running ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Running…</> : <><RefreshCw className="w-4 h-4 mr-2" /> Run Reconciliation</>}

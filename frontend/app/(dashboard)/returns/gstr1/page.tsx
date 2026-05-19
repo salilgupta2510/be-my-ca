@@ -9,8 +9,11 @@ import { toast } from "sonner";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const PERIOD = "2025-01";
-const CACHE_KEY = `gstr1:${PERIOD}`;
+
+function getPeriod() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("bemyca_period") ?? "";
+}
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -91,7 +94,9 @@ function PageSkeleton() {
 }
 
 export default function GSTR1Page() {
-  const cached = cacheGet<GSTR1Return | "none">(CACHE_KEY);
+  const [period] = useState(getPeriod);
+  const cacheKey = `gstr1:${period}`;
+  const cached = cacheGet<GSTR1Return | "none">(cacheKey);
   const [ret, setRet] = useState<GSTR1Return | null>(
     cached && cached !== "none" ? cached : null
   );
@@ -101,29 +106,29 @@ export default function GSTR1Page() {
   useEffect(() => {
     async function load(silent: boolean) {
       if (!silent) setLoading(true);
-      const res = await fetch(`${API}/returns/gstr1?period=${PERIOD}`, { headers: authH() });
+      const res = await fetch(`${API}/returns/gstr1?period=${period}`, { headers: authH() });
       if (res.ok) {
         const data = await res.json();
         setRet(data);
-        cacheSet(CACHE_KEY, data);
+        cacheSet(cacheKey, data);
       } else {
-        cacheSet(CACHE_KEY, "none");
+        cacheSet(cacheKey, "none");
       }
       setLoading(false);
     }
     load(!!cached);
-  }, []);
+  }, [period]);
 
   async function compute() {
     setComputing(true);
     try {
-      const res = await fetch(`${API}/returns/gstr1/compute?period=${PERIOD}`, {
+      const res = await fetch(`${API}/returns/gstr1/compute?period=${period}`, {
         method: "POST", headers: authH(true),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "Compute failed");
       const data = await res.json();
       setRet(data);
-      cacheSet(CACHE_KEY, data);
+      cacheSet(cacheKey, data);
       toast.success("GSTR-1 computed");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Compute failed");
@@ -144,7 +149,7 @@ export default function GSTR1Page() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">GSTR-1</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Outward supplies return · Period: {PERIOD}</p>
+          <p className="text-slate-400 text-sm mt-0.5">Outward supplies return · Period: {period}</p>
         </div>
         <div className="flex items-center gap-3">
           {ret && (

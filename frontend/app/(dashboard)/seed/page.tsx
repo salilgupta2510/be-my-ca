@@ -8,7 +8,11 @@ import { toast } from "sonner";
 import { cacheClear } from "@/lib/cache";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const PERIOD = "2025-01";
+
+function getPeriod() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("bemyca_period") ?? "";
+}
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -47,10 +51,19 @@ const SAMPLE_INWARD = [
 interface Result { type: "outward" | "inward"; invoice_number: string; ok: boolean; error?: string; }
 
 export default function SampleDataPage() {
+  const [period] = useState(getPeriod);
   const [seeding, setSeeding] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
   const [done, setDone] = useState(false);
+
+  function periodDate(date: string) {
+    return date.replace(/^\d{4}-\d{2}/, period);
+  }
+
+  function clearCaches() {
+    [`dashboard:${period}`, `invoices:outward:${period}`, `invoices:inward:${period}`, `reconciliation:${period}`, `gstr1:${period}`, `gstr3b:${period}`].forEach(cacheClear);
+  }
 
   async function seed() {
     setSeeding(true);
@@ -61,7 +74,7 @@ export default function SampleDataPage() {
     for (const inv of SAMPLE_OUTWARD) {
       const res = await fetch(`${API}/invoices/outward`, {
         method: "POST", headers: authH(true),
-        body: JSON.stringify({ ...inv, period: PERIOD }),
+        body: JSON.stringify({ ...inv, period, invoice_date: periodDate(inv.invoice_date) }),
       });
       newResults.push({ type: "outward", invoice_number: inv.invoice_number, ok: res.ok, error: res.ok ? undefined : (await res.json()).detail });
       setResults([...newResults]);
@@ -70,13 +83,13 @@ export default function SampleDataPage() {
     for (const inv of SAMPLE_INWARD) {
       const res = await fetch(`${API}/invoices/inward`, {
         method: "POST", headers: authH(true),
-        body: JSON.stringify({ ...inv, period: PERIOD }),
+        body: JSON.stringify({ ...inv, period, invoice_date: periodDate(inv.invoice_date) }),
       });
       newResults.push({ type: "inward", invoice_number: inv.invoice_number, ok: res.ok, error: res.ok ? undefined : (await res.json()).detail });
       setResults([...newResults]);
     }
 
-    ["dashboard:2025-01", "invoices:outward:2025-01", "invoices:inward:2025-01", "reconciliation:2025-01", "gstr1:2025-01", "gstr3b:2025-01"].forEach(cacheClear);
+    clearCaches();
     setSeeding(false);
     setDone(true);
     const failed = newResults.filter(r => !r.ok).length;
@@ -85,12 +98,12 @@ export default function SampleDataPage() {
   }
 
   async function clearAll() {
-    if (!confirm("Delete ALL invoices for period 2025-01? This cannot be undone.")) return;
+    if (!confirm(`Delete ALL invoices for period ${period}? This cannot be undone.`)) return;
     setClearing(true);
     try {
       const [outRes, inRes] = await Promise.all([
-        fetch(`${API}/invoices/outward?period=${PERIOD}`, { headers: authH() }),
-        fetch(`${API}/invoices/inward?period=${PERIOD}`, { headers: authH() }),
+        fetch(`${API}/invoices/outward?period=${period}`, { headers: authH() }),
+        fetch(`${API}/invoices/inward?period=${period}`, { headers: authH() }),
       ]);
       const outInvs = outRes.ok ? await outRes.json() : [];
       const inInvs = inRes.ok ? await inRes.json() : [];
@@ -98,7 +111,7 @@ export default function SampleDataPage() {
         ...outInvs.map((i: { id: string }) => fetch(`${API}/invoices/outward/${i.id}`, { method: "DELETE", headers: authH() })),
         ...inInvs.map((i: { id: string }) => fetch(`${API}/invoices/inward/${i.id}`, { method: "DELETE", headers: authH() })),
       ]);
-      ["dashboard:2025-01", "invoices:outward:2025-01", "invoices:inward:2025-01", "reconciliation:2025-01", "gstr1:2025-01", "gstr3b:2025-01"].forEach(cacheClear);
+      clearCaches();
       setResults([]);
       setDone(false);
       toast.success(`Deleted ${outInvs.length + inInvs.length} invoices`);
@@ -119,7 +132,7 @@ export default function SampleDataPage() {
           <FlaskConical className="w-6 h-6 text-purple-400" /> Sample Data
         </h1>
         <p className="text-slate-400 text-sm mt-0.5">
-          Seed realistic Indian GST invoices for period {PERIOD} to test the tool end-to-end.
+          Seed realistic Indian GST invoices for period {period} to test the tool end-to-end.
         </p>
       </div>
 
@@ -148,7 +161,7 @@ export default function SampleDataPage() {
         <CardContent className="p-4 flex items-start gap-3">
           <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
           <p className="text-amber-300 text-sm">
-            This creates real records in your account for period <strong>2025-01</strong>. Use only for testing — delete before going live.
+            This creates real records in your account for period <strong>{period}</strong>. Use only for testing — delete before going live.
           </p>
         </CardContent>
       </Card>
