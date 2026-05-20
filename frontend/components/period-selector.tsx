@@ -157,7 +157,7 @@ export function PeriodSelector({ period, onSelect }: Props) {
               <p className="text-slate-400 text-xs mb-4">
                 Select any past or current period to view or file returns.
               </p>
-              <Select value={manualPeriod} onValueChange={setManualPeriod}>
+              <Select value={manualPeriod} onValueChange={(v) => { if (v) setManualPeriod(v); }}>
                 <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                   <SelectValue />
                 </SelectTrigger>
