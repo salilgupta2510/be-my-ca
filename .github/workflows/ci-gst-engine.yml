@@ -1,0 +1,33 @@
+name: gst-engine CI
+
+on:
+  push:
+    paths:
+      - "gst-engine/**"
+      - ".github/workflows/ci-gst-engine.yml"
+  pull_request:
+    paths:
+      - "gst-engine/**"
+      - ".github/workflows/ci-gst-engine.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gst-engine
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: gst-engine/pyproject.toml
+
+      - name: Install
+        run: pip install -e ".[dev,api]"
+
+      - name: Test
+        run: pytest tests/ -v

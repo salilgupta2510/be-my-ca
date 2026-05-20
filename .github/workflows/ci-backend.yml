@@ -1,0 +1,38 @@
+name: backend CI
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - "gst-engine/**"
+      - ".github/workflows/ci-backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "gst-engine/**"
+      - ".github/workflows/ci-backend.yml"
+
+jobs:
+  install-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install gst-engine
+        run: pip install -e ../gst-engine
+
+      - name: Install backend deps
+        run: grep -v 'gst-engine' requirements.txt | pip install -r /dev/stdin
+
+      - name: Import check
+        run: python -c "from app.main import app; print('app imports OK')"
