@@ -18,6 +18,9 @@ migrate-create:
 test-backend:
 	cd backend && .venv/bin/pytest -v
 
+gen-api-key:
+	@prefix=$${prefix:-dev}; python3 -c "import secrets; print(f'gsk_$${prefix}_{secrets.token_urlsafe(32)}')"
+
 dev-gst-engine:
 	cd gst-engine && ../backend/.venv/bin/uvicorn api.main:app --reload --host 0.0.0.0 --port 8001
 
