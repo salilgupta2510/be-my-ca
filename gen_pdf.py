@@ -3,508 +3,490 @@ from reportlab.lib import colors
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.platypus import Paragraph
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-import os
 
 OUT = "/Users/salil.gupta/Documents/Dev/be-my-ca/bemyca-marketing.pdf"
+W, H = A4  # 595.27 x 841.89 pts
 
-W, H = A4  # 595.27, 841.89
+BG        = colors.HexColor("#0f172a")
+CARD      = colors.HexColor("#1e293b")
+BORDER    = colors.HexColor("#334155")
+AMBER     = colors.HexColor("#f59e0b")
+AMBER_DIM = colors.HexColor("#78350f")
+WHITE     = colors.HexColor("#f8fafc")
+SLATE3    = colors.HexColor("#cbd5e1")
+SLATE4    = colors.HexColor("#94a3b8")
+SLATE5    = colors.HexColor("#64748b")
+RED       = colors.HexColor("#ef4444")
+GREEN     = colors.HexColor("#22c55e")
+BLUE      = colors.HexColor("#3b82f6")
+PURPLE    = colors.HexColor("#a78bfa")
 
-# Colors
-BG = colors.HexColor("#0f172a")
-CARD = colors.HexColor("#1e293b")
-BORDER = colors.HexColor("#334155")
-AMBER = colors.HexColor("#f59e0b")
-AMBER_DIM = colors.HexColor("#92400e")
-WHITE = colors.HexColor("#f8fafc")
-SLATE3 = colors.HexColor("#cbd5e1")
-SLATE4 = colors.HexColor("#94a3b8")
-SLATE5 = colors.HexColor("#64748b")
-RED = colors.HexColor("#ef4444")
-GREEN = colors.HexColor("#22c55e")
-BLUE = colors.HexColor("#3b82f6")
 
-def page_bg(c, pg):
+def draw_bg(c, pg):
     c.setFillColor(BG)
     c.rect(0, 0, W, H, fill=1, stroke=0)
-    # subtle grid dots
-    c.setFillColor(colors.HexColor("#1e293b"))
-    for x in range(0, int(W)+1, 24):
-        for y in range(0, int(H)+1, 24):
-            c.circle(x, y, 0.8, fill=1, stroke=0)
-    # page number
+    c.setFillColor(colors.HexColor("#141f33"))
+    for x in range(0, int(W) + 1, 28):
+        for y in range(0, int(H) + 1, 28):
+            c.circle(x, y, 0.7, fill=1, stroke=0)
+    c.setFillColor(AMBER)
+    c.rect(0, H - 3, W, 3, fill=1, stroke=0)
     c.setFillColor(SLATE5)
     c.setFont("Helvetica", 7)
-    c.drawCentredString(W/2, 10*mm, f"{pg} / 4")
+    c.drawCentredString(W / 2, 10 * mm, f"{pg} / 4")
 
-def amber_pill(c, x, y, text, w=None):
-    c.setFont("Helvetica-Bold", 7)
-    tw = c.stringWidth(text, "Helvetica-Bold", 7)
-    pw = (w or tw) + 12
-    ph = 14
-    c.setFillColor(AMBER_DIM)
-    c.roundRect(x, y, pw, ph, 4, fill=1, stroke=0)
-    c.setFillColor(AMBER)
-    c.drawString(x + 6, y + 3.5, text)
-    return pw
 
-def card_rect(c, x, y, w, h):
+def draw_card(c, x, y, w, h, accent=None):
     c.setFillColor(CARD)
     c.setStrokeColor(BORDER)
-    c.roundRect(x, y, w, h, 6, fill=1, stroke=1)
+    c.setLineWidth(0.5)
+    c.roundRect(x, y, w, h, 5, fill=1, stroke=1)
+    if accent:
+        c.setFillColor(accent)
+        c.roundRect(x, y, 3.5, h, 3, fill=1, stroke=0)
 
-def draw_page1(c):
-    page_bg(c, 1)
 
-    # Amber top accent bar
+# ── PAGE 1: Hero ───────────────────────────────────────────────────────────────
+
+def page1(c):
+    draw_bg(c, 1)
+
+    # Brand — 15mm from top
     c.setFillColor(AMBER)
-    c.rect(0, H - 3, W, 3, fill=1, stroke=0)
-
-    # Logo / brand
-    c.setFillColor(AMBER)
-    c.setFont("Helvetica-Bold", 28)
-    c.drawString(24*mm, H - 22*mm, "BeMyCa")
-    c.setFillColor(SLATE4)
-    c.setFont("Helvetica", 9)
-    c.drawString(24*mm, H - 27*mm, "bemyca.cloud  ·  GST Filing, Simplified")
-
-    # Tagline hero block
-    hero_y = H - 70*mm
-    hero_h = 44*mm
-    # gradient-like: layered rects
-    c.setFillColor(colors.HexColor("#1a2a1a"))
-    c.roundRect(20*mm, hero_y, W - 40*mm, hero_h, 10, fill=1, stroke=0)
-    c.setFillColor(AMBER)
-    c.roundRect(20*mm, hero_y, 4, hero_h, 0, fill=1, stroke=0)
-
-    c.setFillColor(WHITE)
-    c.setFont("Helvetica-Bold", 22)
-    c.drawString(28*mm, hero_y + 28*mm, "Upload your bills.")
-    c.setFillColor(AMBER)
-    c.setFont("Helvetica-Bold", 22)
-    c.drawString(28*mm, hero_y + 20*mm, "We handle your GST.")
-    c.setFillColor(SLATE3)
-    c.setFont("Helvetica", 9)
-    c.drawString(28*mm, hero_y + 13*mm, "AI-powered invoice reading  ·  Automatic return computation  ·  No CA fees")
+    c.setFont("Helvetica-Bold", 26)
+    c.drawString(24 * mm, H - 15 * mm, "BeMyCa")
     c.setFillColor(SLATE4)
     c.setFont("Helvetica", 8)
-    c.drawString(28*mm, hero_y + 7*mm, "GSTR-1  ·  GSTR-3B  ·  GSTR-9  ·  GSTR-2B Reconciliation  ·  ITC Ledger")
+    c.drawString(24 * mm, H - 21 * mm, "bemyca.cloud  ·  GST Filing, Simplified")
 
-    # Stats row
-    stats = [
-        ("13", "Features included"),
-        ("₹999", "Per month Pro"),
-        ("~3 min", "Avg filing time"),
-        ("₹0", "CA consultation fees"),
-    ]
-    sx = 20*mm
-    sw = (W - 40*mm) / 4
-    sy = H - 120*mm
-    sh = 28*mm
-    for val, label in stats:
-        card_rect(c, sx, sy, sw - 3, sh)
-        c.setFillColor(AMBER)
-        c.setFont("Helvetica-Bold", 18)
-        c.drawCentredString(sx + (sw-3)/2, sy + 17*mm, val)
-        c.setFillColor(SLATE4)
-        c.setFont("Helvetica", 7)
-        c.drawCentredString(sx + (sw-3)/2, sy + 10*mm, label)
-        sx += sw
-
-    # Section: what you get
+    # Hero block: top=H-27mm, bottom=H-66mm, h=39mm
+    hx, hy = 20 * mm, H - 66 * mm
+    hw, hh = W - 40 * mm, 39 * mm
+    c.setFillColor(colors.HexColor("#0d1f0d"))
+    c.roundRect(hx, hy, hw, hh, 8, fill=1, stroke=0)
     c.setFillColor(AMBER)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(24*mm, H - 158*mm, "EVERYTHING IN PRO — AVAILABLE TODAY")
-    c.setFillColor(BORDER)
-    c.rect(24*mm, H - 160*mm, W - 48*mm, 0.5, fill=1, stroke=0)
+    c.roundRect(hx, hy, 4, hh, 4, fill=1, stroke=0)
+    c.setFillColor(WHITE)
+    c.setFont("Helvetica-Bold", 20)
+    c.drawString(hx + 8 * mm, hy + 27 * mm, "Upload your bills.")
+    c.setFillColor(AMBER)
+    c.setFont("Helvetica-Bold", 20)
+    c.drawString(hx + 8 * mm, hy + 18 * mm, "We handle your GST.")
+    c.setFillColor(SLATE3)
+    c.setFont("Helvetica", 8)
+    c.drawString(hx + 8 * mm, hy + 11 * mm, "AI-powered invoice reading  ·  Automatic return computation  ·  No CA fees")
+    c.setFillColor(SLATE5)
+    c.setFont("Helvetica", 7)
+    c.drawString(hx + 8 * mm, hy + 5 * mm, "GSTR-1  ·  GSTR-3B  ·  GSTR-9  ·  GSTR-2B Reconciliation  ·  ITC Ledger")
 
-    features_short = [
-        ("AI Invoice Reader", "Photo any bill → Claude extracts all fields automatically"),
-        ("Sales Invoice Management", "Add, edit, search outward invoices — B2B / B2C / Export / Credit Note"),
-        ("Purchase Invoice Management", "Inward invoices with RCM flag and GSTIN validation"),
-        ("GSTR-1 Computation", "Auto-categorises B2B, B2C, Exports; Table 12 HSN/SAC summary"),
-        ("GSTR-3B Computation", "Net tax payable after ITC, section-wise breakdown"),
-        ("GSTR-9 Annual Return", "One-click aggregation of all 12 months, Table 4 outward breakdown"),
-        ("GSTR-2B Reconciliation", "Purchase vs supplier-filed: matched / mismatched / missing + IMS actions"),
-        ("ITC Ledger", "12-month rolling: ITC available, claimed, net cash paid, running balance"),
-        ("PDF Invoice Generation", "Professional invoices with GSTIN, HSN, tax breakdown"),
-        ("6-Month Trend Dashboard", "Visual chart: tax liability, ITC, turnover — spot cash flow patterns"),
-        ("Late Fee & Interest Calculator", "GSTR-1/3B fees (₹50/day, capped ₹10k) + 18% p.a. interest"),
-        ("CSV Export", "One-click export of any invoice list"),
-        ("Real-time GSTIN Validation", "Format check on every form — catches errors before portal rejection"),
+    # Stats row: top=H-72mm, bottom=H-98mm, h=26mm
+    stats = [
+        ("13",      "Features included"),
+        ("Rs.999",  "Per month Pro"),
+        ("~3 min",  "Avg filing time"),
+        ("Rs.0",    "CA consultation fees"),
     ]
+    sw  = (W - 40 * mm) / 4
+    sx0 = 20 * mm
+    sy  = H - 98 * mm
+    sh  = 26 * mm
+    for i, (val, lbl) in enumerate(stats):
+        sx = sx0 + i * sw
+        draw_card(c, sx, sy, sw - 3, sh)
+        c.setFillColor(AMBER)
+        c.setFont("Helvetica-Bold", 15)
+        c.drawCentredString(sx + (sw - 3) / 2, sy + 15.5 * mm, val)
+        c.setFillColor(SLATE4)
+        c.setFont("Helvetica", 6.5)
+        c.drawCentredString(sx + (sw - 3) / 2, sy + 8.5 * mm, lbl)
 
-    col_w = (W - 48*mm) / 2
-    row_h = 13.5*mm
-    start_y = H - 170*mm
-    for i, (name, desc) in enumerate(features_short):
+    # Section label: H-105mm
+    c.setFillColor(AMBER)
+    c.setFont("Helvetica-Bold", 8.5)
+    c.drawString(24 * mm, H - 105 * mm, "EVERYTHING IN PRO  —  AVAILABLE TODAY")
+    c.setFillColor(BORDER)
+    c.setLineWidth(0.5)
+    c.line(24 * mm, H - 107.5 * mm, W - 24 * mm, H - 107.5 * mm)
+
+    # Features 2-col: top of row-0 baseline = H-110mm, row_h=12.5mm
+    feats = [
+        ("AI Invoice Reader",           "Photo any bill — Claude extracts all fields automatically"),
+        ("Sales Invoice Management",    "Add, edit, search invoices  ·  B2B / B2C / Export / Credit Note"),
+        ("Purchase Invoice Mgmt",       "Inward invoices with RCM flag and GSTIN validation"),
+        ("GSTR-1 Computation",          "Auto-categorises B2B, B2C, Exports; HSN/SAC summary"),
+        ("GSTR-3B Computation",         "Net tax payable after ITC; section-wise breakdown"),
+        ("GSTR-9 Annual Return",        "One-click aggregation of all 12 months; Table 4 breakdown"),
+        ("GSTR-2B Reconciliation",      "Purchase vs supplier-filed: matched / mismatched / missing"),
+        ("ITC Ledger",                  "12-month rolling ledger with running credit balance"),
+        ("PDF Invoice Generation",      "Professional invoices with GSTIN, HSN, tax breakdown"),
+        ("6-Month Trend Dashboard",     "Visual chart: tax liability, ITC, turnover trends"),
+        ("Late Fee Calculator",         "Rs.50/day (capped Rs.10k) + 18% p.a. interest"),
+        ("CSV Export",                  "One-click export of any invoice list"),
+        ("Real-time GSTIN Validation",  "Format check on every form before portal rejection"),
+    ]
+    cw   = (W - 48 * mm) / 2
+    rh   = 12.5 * mm
+    top0 = H - 110 * mm
+    for i, (name, desc) in enumerate(feats):
         col = i % 2
         row = i // 2
-        fx = 24*mm + col * col_w
-        fy = start_y - row * row_h
-        # dot
+        fx  = 24 * mm + col * cw
+        fy  = top0 - row * rh
         c.setFillColor(AMBER)
-        c.circle(fx + 3*mm, fy + 5*mm, 2, fill=1, stroke=0)
+        c.circle(fx + 2.5 * mm, fy - 1.5 * mm, 1.8, fill=1, stroke=0)
         c.setFillColor(WHITE)
         c.setFont("Helvetica-Bold", 7.5)
-        c.drawString(fx + 7*mm, fy + 6.5*mm, name)
+        c.drawString(fx + 6 * mm, fy, name)
         c.setFillColor(SLATE4)
         c.setFont("Helvetica", 6.5)
-        c.drawString(fx + 7*mm, fy + 1.5*mm, desc)
+        c.drawString(fx + 6 * mm, fy - 5 * mm, desc)
 
-    # CTA pill bottom
-    pill_y = 20*mm
+    # CTA bar: bottom=H-210mm
+    cb_y = H - 210 * mm
     c.setFillColor(AMBER)
-    c.roundRect(W/2 - 60*mm, pill_y, 120*mm, 12*mm, 6, fill=1, stroke=0)
+    c.roundRect(W / 2 - 70 * mm, cb_y, 140 * mm, 12 * mm, 6, fill=1, stroke=0)
     c.setFillColor(BG)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawCentredString(W/2, pill_y + 4*mm, "Start FREE 1-month Pro trial at bemyca.cloud")
+    c.setFont("Helvetica-Bold", 8.5)
+    c.drawCentredString(W / 2, cb_y + 4 * mm, "Start your FREE 1-month Pro trial  —  bemyca.cloud")
 
-def draw_page2(c):
-    page_bg(c, 2)
-    c.setFillColor(AMBER)
-    c.rect(0, H - 3, W, 3, fill=1, stroke=0)
+
+# ── PAGE 2: Feature detail cards ───────────────────────────────────────────────
+
+def page2(c):
+    draw_bg(c, 2)
 
     c.setFillColor(WHITE)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(24*mm, H - 20*mm, "What's included in Pro")
+    c.setFont("Helvetica-Bold", 15)
+    txt = "What's included in Pro"
+    c.drawString(24 * mm, H - 16 * mm, txt)
     c.setFillColor(AMBER)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(24*mm + c.stringWidth("What's included in Pro", "Helvetica-Bold", 16) + 4, H - 20*mm, "— available today")
-
+    c.setFont("Helvetica-Bold", 15)
+    c.drawString(24 * mm + c.stringWidth(txt, "Helvetica-Bold", 15) + 3, H - 16 * mm, " — available today")
     c.setFillColor(SLATE4)
-    c.setFont("Helvetica", 8)
-    c.drawString(24*mm, H - 26*mm, "13 features shipping now. No hidden paywalls within Pro.")
+    c.setFont("Helvetica", 7.5)
+    c.drawString(24 * mm, H - 22 * mm, "13 features shipping now. No hidden paywalls within Pro.")
 
     features = [
-        ("📷", "AI Invoice Reader",
-         "Photograph any bill. Claude AI reads the invoice number, GSTIN, HSN code,",
-         "taxable value, IGST/CGST/SGST — no manual entry needed."),
-        ("📤", "Sales Invoice Management",
-         "Add, edit, delete, search outward invoices. Categorise as B2B, B2C Large,",
-         "B2C Small, Export, or Credit Note with full tax breakdown."),
-        ("📥", "Purchase Invoice Management",
+        ("AI Invoice Reader",
+         "Photograph any bill. Claude AI reads invoice no., GSTIN,",
+         "HSN code, taxable value, IGST/CGST/SGST automatically."),
+        ("Sales Invoice Management",
+         "Add, edit, delete, search outward invoices. Categorise as",
+         "B2B, B2C Large, B2C Small, Export, or Credit Note."),
+        ("Purchase Invoice Management",
          "Inward invoices with RCM (Reverse Charge Mechanism) support.",
          "GSTIN validated on every entry before save."),
-        ("📋", "GSTR-1 Computation",
-         "Auto-categorises invoices into correct GSTR-1 sections. Table 12 HSN/SAC",
-         "summary generated automatically — ready for portal upload."),
-        ("🧾", "GSTR-3B Computation",
-         "Computes net tax payable after ITC offset. Section-wise breakdown of",
-         "liabilities and credits matches portal format exactly."),
-        ("📅", "GSTR-9 Annual Return",
-         "One-click aggregation of all 12 monthly returns. Table 4 outward by type,",
-         "month-wise breakdown with filing status per month."),
-        ("🔄", "GSTR-2B Reconciliation",
-         "Compares your purchase register against supplier-filed data. Flags matched,",
-         "mismatched, and missing invoices with IMS action recommendations."),
-        ("💰", "ITC Ledger (12-Month)",
-         "Rolling ledger showing ITC available, claimed, net cash paid, and running",
-         "credit balance. 12 months at a glance."),
-        ("📄", "PDF Invoice Generation",
-         "Generate professional invoices instantly. Includes GSTIN, HSN codes,",
-         "full tax breakdown — downloadable and shareable."),
-        ("📊", "6-Month Trend Dashboard",
-         "Visual chart of tax liability, ITC claimed, and turnover. Spot seasonal",
-         "patterns and cash flow trends at a glance."),
-        ("⏰", "Late Fee & Interest Calculator",
-         "Calculate GSTR-1 and GSTR-3B late fees (₹50/day, capped ₹10,000) and",
-         "18% p.a. interest on delayed tax payments automatically."),
-        ("📁", "CSV Export",
-         "One-click export of any invoice list. Download sales or purchase data",
-         "as CSV for your accountant or reconciliation workflows."),
-        ("✅", "Real-time GSTIN Validation",
-         "Format-checks every GSTIN field on every form. Catches errors before",
-         "portal rejection — 15-digit format, check digit, state code."),
+        ("GSTR-1 Computation",
+         "Auto-categorises invoices into correct GSTR-1 sections.",
+         "Table 12 HSN/SAC summary — ready for portal upload."),
+        ("GSTR-3B Computation",
+         "Computes net tax payable after ITC offset. Section-wise",
+         "breakdown matches portal format exactly."),
+        ("GSTR-9 Annual Return",
+         "One-click aggregation of all 12 monthly returns. Table 4",
+         "outward by type with month-wise filing status."),
+        ("GSTR-2B Reconciliation",
+         "Compares purchase register against supplier-filed data.",
+         "Flags matched, mismatched, missing + IMS actions."),
+        ("ITC Ledger (12-Month)",
+         "Rolling ledger: ITC available, claimed, net cash paid,",
+         "running credit balance — 12 months at a glance."),
+        ("PDF Invoice Generation",
+         "Generate professional invoices instantly. Includes GSTIN,",
+         "HSN codes, full tax breakdown — downloadable."),
+        ("6-Month Trend Dashboard",
+         "Visual chart of tax liability, ITC claimed, and turnover.",
+         "Spot seasonal patterns and cash flow trends."),
+        ("Late Fee & Interest Calculator",
+         "GSTR-1 and GSTR-3B fees (Rs.50/day, capped Rs.10,000).",
+         "Plus 18% p.a. interest on delayed tax payments."),
+        ("CSV Export",
+         "One-click export of any invoice list as CSV.",
+         "Sales or purchase data for your accountant."),
+        ("Real-time GSTIN Validation",
+         "Format-checks every GSTIN on every form. Catches errors",
+         "before portal rejection — 15-digit, check digit, state code."),
     ]
 
-    cols = 2
-    card_w = (W - 52*mm) / 2
-    card_h = 28*mm
-    gap_x = 4*mm
-    gap_y = 3*mm
-    start_y = H - 35*mm
+    cols   = 2
+    cw     = (W - 52 * mm) / 2
+    card_h = 28 * mm
+    gap_x  = 4 * mm
+    gap_y  = 3 * mm
+    # top of row-0 = H-28mm, so card bottom = H-28mm - card_h = H-56mm
+    top0   = H - 28 * mm
 
-    for i, (icon, name, line1, line2) in enumerate(features):
+    for i, (name, l1, l2) in enumerate(features):
         col = i % cols
         row = i // cols
-        cx = 24*mm + col * (card_w + gap_x)
-        cy = start_y - row * (card_h + gap_y) - card_h
-
-        card_rect(c, cx, cy, card_w, card_h)
-        # amber left accent
-        c.setFillColor(AMBER)
-        c.roundRect(cx, cy, 3, card_h, 3, fill=1, stroke=0)
-
+        cx  = 24 * mm + col * (cw + gap_x)
+        cy  = top0 - row * (card_h + gap_y) - card_h  # card bottom
+        draw_card(c, cx, cy, cw, card_h, accent=AMBER)
         c.setFillColor(WHITE)
         c.setFont("Helvetica-Bold", 8)
-        c.drawString(cx + 6*mm, cy + card_h - 8*mm, name)
+        c.drawString(cx + 7 * mm, cy + card_h - 9 * mm, name)
         c.setFillColor(SLATE3)
         c.setFont("Helvetica", 6.5)
-        c.drawString(cx + 6*mm, cy + card_h - 14*mm, line1)
-        c.drawString(cx + 6*mm, cy + card_h - 19*mm, line2)
+        c.drawString(cx + 7 * mm, cy + card_h - 15 * mm, l1)
+        c.drawString(cx + 7 * mm, cy + card_h - 20 * mm, l2)
 
-def draw_page3(c):
-    page_bg(c, 3)
-    c.setFillColor(AMBER)
-    c.rect(0, H - 3, W, 3, fill=1, stroke=0)
 
-    # Header
+# ── PAGE 3: Comparison + Pricing ───────────────────────────────────────────────
+
+def page3(c):
+    draw_bg(c, 3)
+
     c.setFillColor(WHITE)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(24*mm, H - 20*mm, "How BeMyCa compares")
-
+    c.setFont("Helvetica-Bold", 15)
+    c.drawString(24 * mm, H - 16 * mm, "How BeMyCa compares")
     c.setFillColor(SLATE4)
-    c.setFont("Helvetica", 8)
-    c.drawString(24*mm, H - 26*mm, "Feature-for-feature, ₹ for ₹.")
+    c.setFont("Helvetica", 7.5)
+    c.drawString(24 * mm, H - 22 * mm, "Feature-for-feature. Rupee for Rupee.")
 
-    # Comparison table
-    col_headers = ["Feature", "BeMyCa Pro", "ClearTax", "Zoho Books", "Tally Prime", "Vyapar"]
+    # Comparison table ──────────────────────────────────────────────────────────
+    headers = ["Feature", "BeMyCa Pro", "ClearTax", "Zoho Books", "Tally Prime", "Vyapar"]
     rows = [
-        ["AI invoice photo reading",   "✓", "✗", "✗", "✗", "✗"],
-        ["GSTR-1 + 3B + 9",           "✓", "✓ paid", "✓ paid", "✓", "✓ basic"],
-        ["GSTR-2B reconciliation",     "✓", "✓ paid", "✗", "✓", "✗"],
-        ["ITC ledger (12-month)",      "✓", "✓ paid", "✓ paid", "✓", "✗"],
-        ["PDF invoice generation",     "✓", "✗", "✓", "✗", "✓"],
-        ["Late fee calculator",        "✓", "✗", "✗", "✗", "✗"],
-        ["Annual GSTR-9",              "✓", "✓ paid", "✗", "✓", "✗"],
-        ["Direct portal filing (GSP)", "Soon", "✓", "✓", "✓", "✗"],
-        ["Monthly price",              "₹999", "₹1,249", "₹749–₹2,999", "₹1,500 EMI", "₹150–₹225"],
+        ["AI invoice photo reading",    "YES", "NO",       "NO",       "NO",  "NO"],
+        ["GSTR-1 + 3B + 9",            "YES", "YES paid", "YES paid", "YES", "YES basic"],
+        ["GSTR-2B reconciliation",      "YES", "YES paid", "NO",       "YES", "NO"],
+        ["ITC ledger (12-month)",       "YES", "YES paid", "YES paid", "YES", "NO"],
+        ["PDF invoice generation",      "YES", "NO",       "YES",      "NO",  "YES"],
+        ["Late fee calculator",         "YES", "NO",       "NO",       "NO",  "NO"],
+        ["Annual GSTR-9",               "YES", "YES paid", "NO",       "YES", "NO"],
+        ["Direct portal filing (GSP)",  "Soon","YES",      "YES",      "YES", "NO"],
+        ["Monthly price",               "Rs.999","Rs.1,249","Rs.749+","Rs.1,500","Rs.150+"],
     ]
+    data    = [headers] + rows
+    col_w   = [53 * mm, 25 * mm, 24 * mm, 26 * mm, 25 * mm, 22 * mm]
+    row_h   = [8 * mm] + [7.5 * mm] * len(rows)
 
-    table_data = [col_headers] + rows
-    col_widths = [52*mm, 26*mm, 24*mm, 27*mm, 26*mm, 22*mm]
-    row_heights = [8*mm] + [7.5*mm] * len(rows)
-
-    tbl = Table(table_data, colWidths=col_widths, rowHeights=row_heights)
-
+    tbl = Table(data, colWidths=col_w, rowHeights=row_h)
     style_cmds = [
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a2a3a")),
-        ("BACKGROUND", (1, 0), (1, 0), colors.HexColor("#1a3a1a")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), AMBER),
-        ("TEXTCOLOR", (1, 0), (1, 0), AMBER),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, 0), 7),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("ALIGN", (0, 0), (0, -1), "LEFT"),
-        ("LEFTPADDING", (0, 0), (0, -1), 4),
-        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-        ("FONTSIZE", (0, 1), (-1, -1), 7),
-        ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#1e293b"), colors.HexColor("#1a2332")]),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BACKGROUND",    (0, 0), (-1,  0), colors.HexColor("#182840")),
+        ("TEXTCOLOR",     (0, 0), (-1,  0), AMBER),
+        ("FONTNAME",      (0, 0), (-1,  0), "Helvetica-Bold"),
+        ("FONTSIZE",      (0, 0), (-1,  0), 7),
+        ("FONTNAME",      (0, 1), (-1, -1), "Helvetica"),
+        ("FONTSIZE",      (0, 1), (-1, -1), 7),
+        ("ROWBACKGROUNDS",(0, 1), (-1, -1), [colors.HexColor("#1e293b"), colors.HexColor("#1a2232")]),
+        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+        ("ALIGN",         (0, 0), (0,  -1), "LEFT"),
+        ("LEFTPADDING",   (0, 0), (0,  -1), 5),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("GRID",          (0, 0), (-1, -1), 0.4, BORDER),
     ]
-    # Color ✓ green, ✗ red in BeMyCa col
-    for r in range(1, len(table_data)):
-        val = table_data[r][1]
-        if val == "✓":
-            style_cmds.append(("TEXTCOLOR", (1, r), (1, r), GREEN))
-            style_cmds.append(("FONTNAME", (1, r), (1, r), "Helvetica-Bold"))
-        elif val == "✗":
-            style_cmds.append(("TEXTCOLOR", (1, r), (1, r), RED))
-        elif val == "Soon":
-            style_cmds.append(("TEXTCOLOR", (1, r), (1, r), AMBER))
-        # All ✗ in other cols gray
+    for r in range(1, len(data)):
+        v = data[r][1]
+        if v == "YES":
+            style_cmds += [("TEXTCOLOR", (1, r), (1, r), GREEN),
+                           ("FONTNAME",  (1, r), (1, r), "Helvetica-Bold")]
+        elif v == "Soon":
+            style_cmds += [("TEXTCOLOR", (1, r), (1, r), AMBER)]
         for col in range(2, 6):
-            v = table_data[r][col]
-            if v == "✗":
-                style_cmds.append(("TEXTCOLOR", (col, r), (col, r), SLATE5))
-            elif v == "✓":
-                style_cmds.append(("TEXTCOLOR", (col, r), (col, r), SLATE3))
+            if data[r][col] == "NO":
+                style_cmds += [("TEXTCOLOR", (col, r), (col, r), SLATE5)]
+            elif data[r][col] in ("YES", "YES paid", "YES basic"):
+                style_cmds += [("TEXTCOLOR", (col, r), (col, r), SLATE3)]
 
     tbl.setStyle(TableStyle(style_cmds))
+    _tw, th = tbl.wrapOn(c, W, H)
 
-    tbl_x = 22*mm
-    tbl_y = H - 118*mm
-    tbl.wrapOn(c, W, H)
-    tbl.drawOn(c, tbl_x, tbl_y - sum(row_heights[1:]) - row_heights[0])
+    # Table top at H-27mm (just below header)
+    tbl_top = H - 27 * mm
+    tbl_bot = tbl_top - th          # pts from page bottom
+    tbl.drawOn(c, 22 * mm, tbl_bot)
 
-    # Pricing tiers
+    # Pricing section ───────────────────────────────────────────────────────────
+    gap_after_table = 7 * mm
+    label_y   = tbl_bot - gap_after_table   # "Pricing" label baseline
+    tier_h    = 47 * mm
+    tier_top  = label_y - 5 * mm            # top of tier card area
+    tier_bot  = tier_top - tier_h           # bottom of tier cards
+
     c.setFillColor(WHITE)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(24*mm, H - 148*mm, "Pricing")
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(24 * mm, label_y, "Pricing")
 
-    tier_y = H - 196*mm
-    tier_h = 44*mm
     tiers = [
         {
-            "name": "Free Trial",
-            "price": "1 Month FREE",
-            "sub": "No credit card required",
-            "color": colors.HexColor("#1e3a5f"),
+            "name":   "FREE TRIAL",
+            "price":  "1 Month FREE",
+            "sub":    "No credit card required",
             "accent": BLUE,
-            "features": ["Full Pro access", "All 13 features", "Expires after 30 days", "Upgrade anytime"],
+            "bg":     colors.HexColor("#0f1f3d"),
+            "items":  ["Full Pro access", "All 13 features", "Expires after 30 days", "Upgrade anytime"],
         },
         {
-            "name": "Pro",
-            "price": "₹999 / month",
-            "sub": "or ₹8,999/year  (save 25%)",
-            "color": colors.HexColor("#1a2a1a"),
+            "name":   "PRO",
+            "price":  "Rs.999 / month",
+            "sub":    "or Rs.8,999/year  (save 25%)",
             "accent": AMBER,
-            "features": ["Everything in Free Trial", "Unlimited invoices", "Unlimited periods", "Priority support"],
+            "bg":     colors.HexColor("#1a2a0a"),
+            "items":  ["Everything in Free Trial", "Unlimited invoices", "Unlimited periods", "Priority support"],
         },
         {
-            "name": "Enterprise",
-            "price": "Custom Pricing",
-            "sub": "For CAs managing 10+ clients",
-            "color": colors.HexColor("#1a1a2e"),
-            "accent": colors.HexColor("#a78bfa"),
-            "features": ["Multi-client dashboard", "Bulk filing", "Dedicated support", "Custom integrations"],
+            "name":   "ENTERPRISE",
+            "price":  "Custom Pricing",
+            "sub":    "For CAs managing 10+ clients",
+            "accent": PURPLE,
+            "bg":     colors.HexColor("#1a1030"),
+            "items":  ["Multi-client dashboard", "Bulk filing", "Dedicated support", "Custom integrations"],
         },
     ]
-    tier_w = (W - 52*mm) / 3
-    for i, tier in enumerate(tiers):
-        tx = 24*mm + i * (tier_w + 2*mm)
-        c.setFillColor(tier["color"])
-        c.roundRect(tx, tier_y, tier_w, tier_h, 8, fill=1, stroke=0)
-        c.setStrokeColor(tier["accent"])
-        c.setLineWidth(1.2)
-        c.roundRect(tx, tier_y, tier_w, tier_h, 8, fill=0, stroke=1)
+    tier_w = (W - 52 * mm) / 3
+    gap_x  = 2 * mm
+    tx0    = 24 * mm
+
+    for i, t in enumerate(tiers):
+        tx = tx0 + i * (tier_w + gap_x)
+        ty = tier_bot
+        c.setFillColor(t["bg"])
+        c.roundRect(tx, ty, tier_w, tier_h, 7, fill=1, stroke=0)
+        c.setStrokeColor(t["accent"])
         c.setLineWidth(1)
-        # top accent line
-        c.setFillColor(tier["accent"])
-        c.roundRect(tx, tier_y + tier_h - 3, tier_w, 3, 3, fill=1, stroke=0)
-        # name
-        c.setFillColor(tier["accent"])
-        c.setFont("Helvetica-Bold", 8)
-        c.drawCentredString(tx + tier_w/2, tier_y + tier_h - 10*mm, tier["name"].upper())
-        # price
+        c.roundRect(tx, ty, tier_w, tier_h, 7, fill=0, stroke=1)
+        c.setFillColor(t["accent"])
+        c.roundRect(tx, ty + tier_h - 4, tier_w, 4, 3, fill=1, stroke=0)
+
+        c.setFillColor(t["accent"])
+        c.setFont("Helvetica-Bold", 7.5)
+        c.drawCentredString(tx + tier_w / 2, ty + tier_h - 11 * mm, t["name"])
         c.setFillColor(WHITE)
         c.setFont("Helvetica-Bold", 10)
-        c.drawCentredString(tx + tier_w/2, tier_y + tier_h - 16*mm, tier["price"])
-        # sub
+        c.drawCentredString(tx + tier_w / 2, ty + tier_h - 18 * mm, t["price"])
         c.setFillColor(SLATE4)
         c.setFont("Helvetica", 6.5)
-        c.drawCentredString(tx + tier_w/2, tier_y + tier_h - 21*mm, tier["sub"])
-        # divider
+        c.drawCentredString(tx + tier_w / 2, ty + tier_h - 23 * mm, t["sub"])
         c.setStrokeColor(BORDER)
         c.setLineWidth(0.4)
-        c.line(tx + 4*mm, tier_y + tier_h - 24*mm, tx + tier_w - 4*mm, tier_y + tier_h - 24*mm)
-        # features
-        for j, feat in enumerate(tier["features"]):
-            fy = tier_y + tier_h - 30*mm - j * 7
-            c.setFillColor(tier["accent"])
-            c.circle(tx + 6*mm, fy + 2, 2, fill=1, stroke=0)
+        c.line(tx + 4 * mm, ty + tier_h - 26 * mm, tx + tier_w - 4 * mm, ty + tier_h - 26 * mm)
+        for j, item in enumerate(t["items"]):
+            iy = ty + tier_h - 31 * mm - j * 7
+            c.setFillColor(t["accent"])
+            c.circle(tx + 6 * mm, iy + 2, 2, fill=1, stroke=0)
             c.setFillColor(SLATE3)
             c.setFont("Helvetica", 6.5)
-            c.drawString(tx + 9*mm, fy, feat)
+            c.drawString(tx + 10 * mm, iy, item)
 
-    # Why not free callout
-    wf_y = tier_y - 28*mm
+    # Why not free ──────────────────────────────────────────────────────────────
+    wf_h   = 22 * mm
+    wf_bot = tier_bot - 6 * mm - wf_h
     c.setFillColor(colors.HexColor("#1c1208"))
-    c.roundRect(24*mm, wf_y, W - 48*mm, 23*mm, 6, fill=1, stroke=0)
+    c.roundRect(24 * mm, wf_bot, W - 48 * mm, wf_h, 5, fill=1, stroke=0)
     c.setStrokeColor(AMBER_DIM)
     c.setLineWidth(0.8)
-    c.roundRect(24*mm, wf_y, W - 48*mm, 23*mm, 6, fill=0, stroke=1)
-    c.setLineWidth(1)
+    c.roundRect(24 * mm, wf_bot, W - 48 * mm, wf_h, 5, fill=0, stroke=1)
     c.setFillColor(AMBER)
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(28*mm, wf_y + 17*mm, "Why not free?")
+    c.drawString(28 * mm, wf_bot + wf_h - 7 * mm, "Why not free?")
     c.setFillColor(SLATE3)
     c.setFont("Helvetica", 7)
-    c.drawString(28*mm, wf_y + 11*mm, "Free tools cut corners. We invest in AI infrastructure, GSP API integrations, and continuous compliance")
-    c.drawString(28*mm, wf_y + 5.5*mm, "updates. ₹999/month is less than one CA consultation — and we file your returns every month.")
+    c.drawString(28 * mm, wf_bot + wf_h - 13 * mm,
+                 "Free tools cut corners. We invest in AI infrastructure, GSP API integrations,")
+    c.drawString(28 * mm, wf_bot + wf_h - 19 * mm,
+                 "and compliance updates. Rs.999/month is less than one CA consultation.")
 
-    # Competitor jab
+    # Quote
     c.setFillColor(SLATE4)
     c.setFont("Helvetica", 7)
-    c.drawString(24*mm, wf_y - 8*mm, '"ClearTax charges ₹14,999/year and doesn\'t read your invoices.')
-    c.drawString(24*mm, wf_y - 14*mm, ' Tally costs ₹18,000 upfront and needs 2 days of training. BeMyCa Pro: ₹999/month, with AI, from day one."')
+    c.drawString(24 * mm, wf_bot - 7 * mm,
+                 '"ClearTax charges Rs.14,999/year and doesn\'t read your invoices.')
+    c.drawString(24 * mm, wf_bot - 13 * mm,
+                 ' Tally costs Rs.18,000 upfront. BeMyCa Pro: Rs.999/month, with AI, from day one."')
 
-def draw_page4(c):
-    page_bg(c, 4)
-    c.setFillColor(AMBER)
-    c.rect(0, H - 3, W, 3, fill=1, stroke=0)
+
+# ── PAGE 4: Roadmap + CTA ──────────────────────────────────────────────────────
+
+def page4(c):
+    draw_bg(c, 4)
 
     c.setFillColor(WHITE)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(24*mm, H - 20*mm, "What's next — GSP API Integration")
+    c.setFont("Helvetica-Bold", 15)
+    c.drawString(24 * mm, H - 16 * mm, "What's next  —  GSP API Integration")
     c.setFillColor(AMBER)
     c.setFont("Helvetica", 8)
-    c.drawString(24*mm, H - 26*mm, "Pro roadmap  ·  Direct portal filing without manual re-entry")
+    c.drawString(24 * mm, H - 22 * mm, "Pro roadmap  ·  Direct portal filing without manual re-entry")
 
-    # Roadmap items
     roadmap = [
         ("Direct GSTR-1 Filing",
          "Submit GSTR-1 directly to GST portal via GSP API — no manual copy-paste.",
          "Status: In development  ·  Requires GSP tie-up (IRIS Business / ClearTax)"),
         ("Direct GSTR-3B Filing",
-         "File GSTR-3B with EVC/OTP authentication. Tax liability computed and submitted in one flow.",
+         "File GSTR-3B with EVC/OTP authentication. Tax liability submitted in one flow.",
          "Status: Planned  ·  EVC integration after GSTR-1 filing ships"),
         ("Auto GSTR-2B Pull",
-         "Automatically fetch GSTR-2B on the 14th each month. Fully automated reconciliation — zero manual download.",
+         "Automatically fetch GSTR-2B on the 14th each month — zero manual download.",
          "Status: Planned  ·  Available after GSP credentials provisioned"),
         ("Live GSTIN Verification",
-         "Verify GSTIN against live GSTN database — not just format check. Catch deregistered suppliers instantly.",
+         "Verify GSTIN against live GSTN database — catch deregistered suppliers instantly.",
          "Status: Planned  ·  GSP lookup API"),
         ("Tax Payment Initiation",
-         "Generate challan and initiate NEFT/RTGS/Net Banking payment link directly from GSTR-3B computation.",
+         "Generate challan and initiate NEFT/RTGS/Net Banking payment directly.",
          "Status: Roadmap  ·  Requires GSTN payment gateway integration"),
     ]
 
-    ry = H - 38*mm
-    rh = 24*mm
+    rw      = W - 48 * mm
+    rx      = 24 * mm
+    rh      = 24 * mm
+    gap     = 4 * mm
+    top0    = H - 28 * mm   # top of first card
+
     for i, (name, desc, status) in enumerate(roadmap):
-        rx = 24*mm
-        rw = W - 48*mm
-        card_rect(c, rx, ry - i*(rh + 3*mm), rw, rh)
-        c.setFillColor(AMBER_DIM)
-        c.roundRect(rx, ry - i*(rh+3*mm), 3, rh, 3, fill=1, stroke=0)
-        # Step number
+        cy = top0 - i * (rh + gap) - rh    # card bottom
+        draw_card(c, rx, cy, rw, rh, accent=AMBER_DIM)
         c.setFillColor(AMBER)
         c.setFont("Helvetica-Bold", 11)
-        c.drawString(rx + 6*mm, ry - i*(rh+3*mm) + 14*mm, str(i+1))
-        # Name
+        c.drawString(rx + 6 * mm, cy + rh - 10 * mm, str(i + 1))
         c.setFillColor(WHITE)
         c.setFont("Helvetica-Bold", 8)
-        c.drawString(rx + 14*mm, ry - i*(rh+3*mm) + 14*mm, name)
-        # Desc
+        c.drawString(rx + 15 * mm, cy + rh - 10 * mm, name)
         c.setFillColor(SLATE3)
         c.setFont("Helvetica", 7)
-        c.drawString(rx + 14*mm, ry - i*(rh+3*mm) + 8*mm, desc)
-        # Status
+        c.drawString(rx + 15 * mm, cy + rh - 16 * mm, desc)
         c.setFillColor(SLATE5)
         c.setFont("Helvetica", 6.5)
-        c.drawString(rx + 14*mm, ry - i*(rh+3*mm) + 3*mm, status)
+        c.drawString(rx + 15 * mm, cy + rh - 21 * mm, status)
+
+    # last card bottom
+    last_bot = top0 - 4 * (rh + gap) - rh
 
     # CTA block
-    cta_y = 42*mm
-    c.setFillColor(colors.HexColor("#1a2a1a"))
-    c.roundRect(20*mm, cta_y, W - 40*mm, 30*mm, 10, fill=1, stroke=0)
+    cta_h   = 32 * mm
+    cta_bot = last_bot - 10 * mm - cta_h
+    c.setFillColor(colors.HexColor("#1a2a0a"))
+    c.roundRect(20 * mm, cta_bot, W - 40 * mm, cta_h, 8, fill=1, stroke=0)
     c.setStrokeColor(AMBER)
     c.setLineWidth(1.5)
-    c.roundRect(20*mm, cta_y, W - 40*mm, 30*mm, 10, fill=0, stroke=1)
-    c.setLineWidth(1)
-
+    c.roundRect(20 * mm, cta_bot, W - 40 * mm, cta_h, 8, fill=0, stroke=1)
     c.setFillColor(AMBER)
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(W/2, cta_y + 20*mm, "Start your free 1-month Pro trial")
+    c.drawCentredString(W / 2, cta_bot + cta_h - 11 * mm, "Start your free 1-month Pro trial")
     c.setFillColor(WHITE)
     c.setFont("Helvetica-Bold", 11)
-    c.drawCentredString(W/2, cta_y + 13*mm, "bemyca.cloud")
+    c.drawCentredString(W / 2, cta_bot + cta_h - 20 * mm, "bemyca.cloud")
     c.setFillColor(SLATE4)
     c.setFont("Helvetica", 7.5)
-    c.drawCentredString(W/2, cta_y + 7*mm, "No credit card required  ·  All 13 Pro features  ·  Cancel anytime")
+    c.drawCentredString(W / 2, cta_bot + cta_h - 27 * mm,
+                        "No credit card required  ·  All 13 Pro features  ·  Cancel anytime")
 
     # Footer
+    footer_y = cta_bot - 10 * mm
     c.setFillColor(BORDER)
-    c.rect(24*mm, 26*mm, W - 48*mm, 0.5, fill=1, stroke=0)
+    c.setLineWidth(0.4)
+    c.line(24 * mm, footer_y, W - 24 * mm, footer_y)
     c.setFillColor(SLATE5)
     c.setFont("Helvetica", 7)
-    c.drawString(24*mm, 20*mm, "BeMyCa  ·  bemyca.cloud  ·  GST filing for Indian businesses")
-    c.drawRightString(W - 24*mm, 20*mm, "© 2025 BeMyCa. All rights reserved.")
+    c.drawString(24 * mm, footer_y - 6 * mm,
+                 "BeMyCa  ·  bemyca.cloud  ·  GST filing for Indian businesses")
+    c.drawRightString(W - 24 * mm, footer_y - 6 * mm, "© 2025 BeMyCa. All rights reserved.")
 
 
-c = canvas.Canvas(OUT, pagesize=A4)
-draw_page1(c)
-c.showPage()
-draw_page2(c)
-c.showPage()
-draw_page3(c)
-c.showPage()
-draw_page4(c)
-c.showPage()
-c.save()
-print(f"PDF saved: {OUT}")
+# ── Build ──────────────────────────────────────────────────────────────────────
+
+cv = canvas.Canvas(OUT, pagesize=A4)
+page1(cv); cv.showPage()
+page2(cv); cv.showPage()
+page3(cv); cv.showPage()
+page4(cv); cv.showPage()
+cv.save()
+print(f"Saved: {OUT}")
