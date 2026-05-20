@@ -34,5 +34,5 @@ jobs:
       - name: Install backend deps
         run: grep -v 'gst-engine' requirements.txt | pip install -r /dev/stdin
 
-      - name: Import check
-        run: python -c "from app.main import app; print('app imports OK')"
+      - name: Test
+        run: pytest tests/ -v
