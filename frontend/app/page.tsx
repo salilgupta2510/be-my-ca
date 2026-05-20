@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Upload, FileText, ShieldCheck, Clock, Zap, BarChart3, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Upload, FileText, ShieldCheck, Clock, Zap, BarChart3, Loader2, Sparkles, Lock, Cpu, Timer, AlertCircle, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -196,7 +196,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.04) 50%, transparent 100%)" }} />
         <div className="relative max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-center gap-6 text-slate-400 text-sm">
-          {["GSTIN validated", "PDF invoices", "Auto GSTR-2B sync", "HSN summary (Table 12)", "Late fee calculator"].map((t) => (
+          {["GSTIN validated", "PDF invoices", "GSTR-2B Hard-Lock", "RCM auto-classification", "ITC time-bar alerts", "Mismatch guard"].map((t) => (
             <span key={t} className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-amber-500" /> {t}
             </span>
@@ -242,10 +242,124 @@ export default function LandingPage() {
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "linear-gradient(180deg, rgba(10,12,20,0.7) 0%, rgba(14,10,2,0.35) 50%, rgba(10,12,20,0.7) 100%)" }} />
         <div className="relative max-w-6xl mx-auto px-4 py-24">
+
           <div className="text-center mb-16">
             <p className="text-amber-500 text-xs font-semibold tracking-[0.2em] uppercase mb-3">Features</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Everything GST, handled</h2>
-            <p className="text-slate-400 max-w-xl mx-auto">One dashboard. All returns. Zero confusion.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Everything GST, automated</h2>
+            <p className="text-slate-400 max-w-xl mx-auto">One dashboard. All returns. GST law enforcement built-in.</p>
+          </div>
+
+          {/* ── New automation features ── */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px" style={{ background: "rgba(245,158,11,0.14)" }} />
+            <span className="text-xs font-semibold tracking-[0.18em] uppercase px-3 py-1 rounded-full border"
+              style={{ borderColor: "rgba(245,158,11,0.28)", color: "#F59E0B", background: "rgba(245,158,11,0.05)" }}>
+              New — AI compliance automations
+            </span>
+            <div className="flex-1 h-px" style={{ background: "rgba(245,158,11,0.14)" }} />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
+
+            {/* HERO: GSTR-2B Hard-Lock */}
+            <div className="card-hover md:col-span-8 rounded-2xl p-8 border relative overflow-hidden"
+              style={{ background: "rgba(10,12,20,0.97)", borderColor: "rgba(245,158,11,0.28)" }}>
+              <div className="absolute inset-0 pointer-events-none"
+                style={{ background: "radial-gradient(ellipse 70% 55% at 92% 8%, rgba(245,158,11,0.10) 0%, transparent 65%)" }} />
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+                    style={{ background: "rgba(245,158,11,0.12)" }}>
+                    <Lock className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <span className="text-xs font-bold tracking-widest uppercase px-2.5 py-1 rounded-md"
+                    style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B" }}>New</span>
+                </div>
+                <h3 className="text-white font-bold text-xl mb-3">GSTR-2B Hard-Lock</h3>
+                <p className="text-slate-300 text-sm leading-relaxed mb-5 max-w-lg">
+                  Per-invoice 2B stamping per Section 16(2)(aa). Every purchase invoice is marked{" "}
+                  <span className="text-emerald-400 font-medium">Matched</span>,{" "}
+                  <span className="text-red-400 font-medium">Missing-in-2B</span>, or{" "}
+                  <span className="text-amber-400 font-medium">Accepted-with-Risk</span>.
+                  GSTR-3B silently excludes unverified ITC — protecting you from demand notices before they arrive.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {["Sec 16(2)(aa)", "Per-invoice stamp", "Conservative ITC", "Risk acceptance"].map(tag => (
+                    <span key={tag} className="text-xs px-2.5 py-0.5 rounded-md border"
+                      style={{ borderColor: "rgba(245,158,11,0.18)", color: "rgba(245,158,11,0.75)", background: "rgba(245,158,11,0.04)" }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right column: RCM + ITC Time-Bar stacked */}
+            <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-4">
+              <div className="card-hover rounded-2xl p-6 border"
+                style={{ background: "rgba(10,12,20,0.85)", borderColor: "rgba(99,102,241,0.22)" }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                    style={{ background: "rgba(99,102,241,0.12)" }}>
+                    <Cpu className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <span className="text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded-md"
+                    style={{ background: "rgba(99,102,241,0.12)", color: "#818CF8" }}>New</span>
+                </div>
+                <h3 className="text-white font-semibold text-sm mb-1">RCM Auto-Classification</h3>
+                <p className="text-slate-400 text-xs leading-relaxed">HSN/SAC lookup per Section 9(3). GTA, legal, arbitral and 8 other categories auto-flagged. Sec 17(5) blocked ITC caught instantly.</p>
+              </div>
+
+              <div className="card-hover rounded-2xl p-6 border"
+                style={{ background: "rgba(10,12,20,0.85)", borderColor: "rgba(239,68,68,0.2)" }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                    style={{ background: "rgba(239,68,68,0.10)" }}>
+                    <Timer className="w-4 h-4 text-red-400" />
+                  </div>
+                  <span className="text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded-md"
+                    style={{ background: "rgba(239,68,68,0.10)", color: "#F87171" }}>New</span>
+                </div>
+                <h3 className="text-white font-semibold text-sm mb-1">ITC Time-Bar Monitor</h3>
+                <p className="text-slate-400 text-xs leading-relaxed">Section 16(4) 1-year deadline enforced. 60-day expiry alerts. Lapsed ITC auto-blocked before you accidentally claim it.</p>
+              </div>
+            </div>
+
+            {/* Bottom row: Mismatch Guard + Filing Sequencer */}
+            <div className="col-span-1 md:col-span-6 card-hover rounded-2xl p-6 border"
+              style={{ background: "rgba(10,12,20,0.85)", borderColor: "rgba(16,185,129,0.2)" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                  style={{ background: "rgba(16,185,129,0.10)" }}>
+                  <AlertCircle className="w-4 h-4 text-emerald-400" />
+                </div>
+                <span className="text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded-md"
+                  style={{ background: "rgba(16,185,129,0.10)", color: "#34D399" }}>New</span>
+              </div>
+              <h3 className="text-white font-semibold text-sm mb-1">GSTR-1 vs 3B Mismatch Guard</h3>
+              <p className="text-slate-400 text-xs leading-relaxed">GSTN ANSR pre-check built in. Blocks GSTR-3B if outward tax deviation exceeds 1% of GSTR-1. Catches discrepancies before GSTN does.</p>
+            </div>
+
+            <div className="col-span-1 md:col-span-6 card-hover rounded-2xl p-6 border"
+              style={{ background: "rgba(10,12,20,0.85)", borderColor: "rgba(6,182,212,0.2)" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                  style={{ background: "rgba(6,182,212,0.08)" }}>
+                  <GitBranch className="w-4 h-4 text-cyan-400" />
+                </div>
+                <span className="text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded-md"
+                  style={{ background: "rgba(6,182,212,0.08)", color: "#22D3EE" }}>New</span>
+              </div>
+              <h3 className="text-white font-semibold text-sm mb-1">Return Filing Sequencer</h3>
+              <p className="text-slate-400 text-xs leading-relaxed">Enforces GST law dependency order. GSTR-3B blocked until GSTR-1 filed. GSTR-9 blocked if any monthly GSTR-3B is missing.</p>
+            </div>
+          </div>
+
+          {/* ── Core features ── */}
+          <div className="flex items-center gap-3 my-10">
+            <div className="flex-1 h-px bg-slate-800/50" />
+            <span className="text-xs text-slate-500 tracking-[0.15em] uppercase px-3">Core features</span>
+            <div className="flex-1 h-px bg-slate-800/50" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
