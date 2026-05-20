@@ -17,7 +17,7 @@ services:
     name: bemyca-api
     runtime: docker
     rootDir: .
-    dockerfilePath: backend/Dockerfile
+    dockerfilePath: Dockerfile.backend
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
