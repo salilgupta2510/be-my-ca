@@ -67,7 +67,7 @@ class ReconciliationResult(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     period: Mapped[str] = mapped_column(String(7), nullable=False)
     gstr2b_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("gstr2b_records.id"), nullable=True)
-    inward_invoice_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("inward_invoices.id"), nullable=True)
+    inward_invoice_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("inward_invoices.id", ondelete="SET NULL"), nullable=True)
     status: Mapped[ReconciliationStatus] = mapped_column(SAEnum(ReconciliationStatus, values_callable=lambda x: [e.value for e in x]), nullable=False)
     match_confidence: Mapped[int] = mapped_column(Integer, default=100)  # 0-100
     taxable_diff: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=0)
