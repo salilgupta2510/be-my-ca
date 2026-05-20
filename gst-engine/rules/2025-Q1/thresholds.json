@@ -1,0 +1,9 @@
+{
+  "_effective": "2025-01-01",
+  "_source": "CGST Act 2017, Notification 10/2019-CT (composition threshold enhanced)",
+  "normal_registration_inr": 2000000,
+  "special_category_registration_inr": 1000000,
+  "composition_threshold_inr": 5000000,
+  "hsn_mandatory_threshold_inr": 50000000,
+  "hsn_optional_threshold_inr": 15000000
+}

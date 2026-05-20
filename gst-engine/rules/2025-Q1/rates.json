@@ -1,0 +1,37 @@
+{
+  "_effective": "2025-01-01",
+  "_source": "CGST Act 2017 Schedule I-IV; Composition Notification 08/2017-CT",
+  "standard_rates": [0, 5, 12, 18, 28],
+  "composition_rates": {
+    "manufacturer": 1.0,
+    "restaurant": 5.0,
+    "trader": 1.0,
+    "other_services": 6.0
+  },
+  "late_fee": {
+    "gstr1_nil_daily_each_act": 10,
+    "gstr1_nonnl_daily_each_act": 25,
+    "gstr3b_nil_daily_each_act": 10,
+    "gstr3b_nonnl_daily_each_act": 25,
+    "gstr1_nil_max_each": 500,
+    "gstr1_nonnl_max_each": 1000,
+    "gstr3b_nil_max_each": 500,
+    "gstr3b_nonnl_max_each": 1000,
+    "gstr9_daily_total": 200,
+    "gstr9_max_pct_of_turnover": 0.25,
+    "turnover_slab_1_crore": 15000000,
+    "turnover_slab_1_max_total": 2000,
+    "turnover_slab_2_crore": 50000000,
+    "turnover_slab_2_max_total": 5000,
+    "turnover_slab_3_max_total": 10000
+  },
+  "due_dates": {
+    "gstr1_day_of_next_month": 11,
+    "gstr3b_day_of_next_month": 20,
+    "gstr4_day_of_next_month": 18,
+    "gstr6_day_of_next_month": 13,
+    "gstr7_day_of_next_month": 10,
+    "gstr9_month": 12,
+    "gstr9_day": 31
+  }
+}

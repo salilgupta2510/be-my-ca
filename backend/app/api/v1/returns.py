@@ -19,6 +19,8 @@ from app.models.user import User
 from app.schemas.returns import GSTReturnOut
 from app.api.deps import get_current_user
 from app.services.gst_engine import check_itc_eligibility, compute_itc_setoff, get_compliance_calendar, get_return_due_date
+from engine.gstr_compute import compute_mismatch as _engine_compute_mismatch, fy_periods as _engine_fy_periods
+from engine.rules_loader import get_rules
 
 router = APIRouter(prefix="/returns", tags=["returns"])
 
@@ -310,9 +312,11 @@ async def compute_gstr4(
     if not business.is_composition:
         raise HTTPException(400, "Only composition dealers file GSTR-4.")
 
-    # Composition rate: 1% for traders (0.5% CGST + 0.5% SGST)
-    # 2.5% for manufacturers, 5% for restaurants — default to 1%
-    COMPOSITION_RATE = Decimal("0.01")
+    # Rate loaded from rules — respects business_type (fixes old hardcoded 1% bug)
+    rules = get_rules()
+    business_type = getattr(business, "composition_type", "trader") or "trader"
+    rate_pct = rules.composition_rates.get(business_type, rules.composition_rates.get("trader", Decimal("1.0")))
+    COMPOSITION_RATE = rate_pct / 100
 
     outward = (await db.scalars(
         select(OutwardInvoice).where(
@@ -344,6 +348,7 @@ async def compute_gstr4(
 
     payload = {
         "aggregate_turnover": float(total_taxable),
+        "composition_tax_rate_pct": float(rate_pct),
         "composition_tax_rate": float(COMPOSITION_RATE),
         "composition_tax": float(composition_tax),
         "cgst_payable": float(cgst_payable),
@@ -398,9 +403,7 @@ async def get_gstr4(
 # ─── GSTR-9 (Annual Return) ──────────────────────────────────────────────────
 
 def _fy_periods(fy: str) -> list[str]:
-    """'2024-25' → ['2024-04'..'2024-12', '2025-01'..'2025-03']"""
-    y1, y2 = fy.split("-")
-    return [f"{y1}-{m:02d}" for m in range(4, 13)] + [f"20{y2}-{m:02d}" for m in range(1, 4)]
+    return _engine_fy_periods(fy)
 
 
 @router.post("/gstr9/compute", response_model=GSTReturnOut)
@@ -666,41 +669,12 @@ async def file_return(
 
 # ─── Mismatch Helper ─────────────────────────────────────────────────────────
 
-MISMATCH_THRESHOLD_PCT = Decimal("1.0")  # 1% tolerance
-
-
 def _compute_mismatch(gstr1: GSTReturn, gstr3b: GSTReturn) -> dict[str, Any]:
-    """Compare outward tax declared in GSTR-1 vs GSTR-3B."""
-    g1 = gstr1.computed_payload or {}
-    g3 = gstr3b.computed_payload or {}
-
-    g1_summary = g1.get("summary", {})
-    g3_out = g3.get("outward_tax_liability", {})
-
-    g1_igst = Decimal(str(g1_summary.get("total_igst", 0)))
-    g1_cgst = Decimal(str(g1_summary.get("total_cgst", 0)))
-    g1_sgst = Decimal(str(g1_summary.get("total_sgst", 0)))
-    g1_total = g1_igst + g1_cgst + g1_sgst
-
-    g3_igst = Decimal(str(g3_out.get("igst", 0)))
-    g3_cgst = Decimal(str(g3_out.get("cgst", 0)))
-    g3_sgst = Decimal(str(g3_out.get("sgst", 0)))
-    g3_total = g3_igst + g3_cgst + g3_sgst
-
-    delta = abs(g1_total - g3_total)
-    pct = (delta / g1_total * 100) if g1_total > 0 else Decimal("0")
-    has_mismatch = pct > MISMATCH_THRESHOLD_PCT
-
-    return {
-        "has_mismatch": has_mismatch,
-        "gstr1_total_tax": float(g1_total),
-        "gstr3b_total_tax": float(g3_total),
-        "total_tax_delta": float(delta),
-        "delta_pct": float(pct),
-        "igst_delta": float(abs(g1_igst - g3_igst)),
-        "cgst_delta": float(abs(g1_cgst - g3_cgst)),
-        "sgst_delta": float(abs(g1_sgst - g3_sgst)),
-    }
+    """Delegate to engine.gstr_compute.compute_mismatch."""
+    return _engine_compute_mismatch(
+        gstr1.computed_payload or {},
+        gstr3b.computed_payload or {},
+    )
 
 
 # ─── Mismatch Report Endpoint ─────────────────────────────────────────────────

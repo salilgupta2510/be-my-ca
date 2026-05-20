@@ -1,0 +1,29 @@
+{
+  "_effective": "2025-01-01",
+  "_source": "Section 17(5) CGST Act 2017",
+  "itc_blocked_categories": [
+    "motor_vehicle",
+    "food_beverages",
+    "health_fitness",
+    "rent_a_cab",
+    "life_insurance",
+    "travel_benefit",
+    "works_contract",
+    "immovable_property",
+    "composition",
+    "personal_use",
+    "free_samples"
+  ],
+  "blocked_hsn_prefixes": {
+    "8703": "motor_vehicle"
+  },
+  "blocked_sac_prefixes": {
+    "9954": "works_contract",
+    "9963": "food_beverages",
+    "9972": "rent_a_cab",
+    "9973": "rent_a_cab",
+    "9993": "health_fitness",
+    "9994": "life_insurance",
+    "9985119": "personal_use"
+  }
+}

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gst-engine"
+version = "0.1.0"
+description = "Indian GST law engine — CGST Act 2017 rules, returns computation, ITC, RCM"
+requires-python = ">=3.11"
+dependencies = [
+    "rapidfuzz>=3.0",
+    "jellyfish>=1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["engine*", "rules*", "api*"]
+
+[tool.setuptools.package-data]
+"rules" = ["**/*.json"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.25"]
+api = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.0",
+]

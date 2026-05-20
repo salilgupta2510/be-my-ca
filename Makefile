@@ -18,6 +18,12 @@ migrate-create:
 test-backend:
 	cd backend && .venv/bin/pytest -v
 
+dev-gst-engine:
+	cd gst-engine && ../backend/.venv/bin/uvicorn api.main:app --reload --host 0.0.0.0 --port 8001
+
+test-gst-engine:
+	cd gst-engine && ../backend/.venv/bin/pytest tests/ -v
+
 install:
 	cd backend && /opt/homebrew/bin/python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt "pydantic[email]"
 	cd frontend && npm install

@@ -1,0 +1,35 @@
+{
+  "_effective": "2025-01-01",
+  "_source": "Notification 13/2017-CT(Rate) as amended; Notification 4/2017-CT(Rate)",
+  "rcm_sac_prefixes": {
+    "9965": "Goods Transport Agency (GTA) — S.9(3)",
+    "9967": "Goods Transport Agency supporting services — S.9(3)",
+    "9982": "Legal services by advocate/law firm — S.9(3)",
+    "9991": "Arbitral tribunal services — S.9(3)",
+    "9983": "Sponsorship services — S.9(3)",
+    "9971": "Insurance agent services — S.9(3)",
+    "9985": "Recovery agent services — S.9(3)",
+    "9996": "Director remuneration (non-employee) — S.9(3)",
+    "9954": "Works contract — immovable property (S.17(5) blocked)"
+  },
+  "rcm_hsn_prefixes": {
+    "0801": "Cashew nuts supplied by agriculturist — S.9(3)",
+    "1404": "Bidi wrapper leaves (tendu) — S.9(3)",
+    "2401": "Tobacco leaves — S.9(3)",
+    "5004": "Silk yarn — S.9(3)",
+    "5201": "Raw cotton — S.9(3)",
+    "7101": "Used vehicles/waste — Govt supply S.9(3)"
+  },
+  "rcm_supplier_keywords": {
+    "transport": "Goods Transport Agency (GTA) — S.9(3)",
+    "logistics": "Goods Transport Agency (GTA) — S.9(3)",
+    "cargo": "Goods Transport Agency (GTA) — S.9(3)",
+    "courier": "Goods Transport Agency (GTA) — S.9(3)",
+    "advocates": "Legal services — S.9(3)",
+    "advocate": "Legal services — S.9(3)",
+    "solicitors": "Legal services — S.9(3)",
+    "law firm": "Legal services — S.9(3)",
+    "llp": "Legal services — S.9(3)",
+    "arbitration": "Arbitral tribunal — S.9(3)"
+  }
+}
