@@ -2,7 +2,7 @@ import uuid
 import enum
 from datetime import datetime, date, timezone
 from decimal import Decimal
-from sqlalchemy import String, Numeric, Date, DateTime, Enum as SAEnum, ForeignKey, Text, Boolean
+from sqlalchemy import String, Numeric, Date, DateTime, Enum as SAEnum, ForeignKey, Text, Boolean, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
@@ -20,6 +20,13 @@ class InvoiceSource(str, enum.Enum):
     MANUAL = "manual"
     OCR_UPLOAD = "ocr_upload"
     IMPORT = "import"
+
+
+class ITC2BStatus(str, enum.Enum):
+    UNVERIFIED = "unverified"       # default — 2B recon not run yet
+    MATCHED = "matched"             # appears in GSTR-2B → ITC claimable
+    MISSING_IN_2B = "missing_in_2b" # not in 2B → ITC blocked per S.16(2)(aa)
+    ACCEPTED_WITH_RISK = "accepted_with_risk"  # user override with risk acknowledgement
 
 
 class OutwardInvoice(Base):
@@ -68,5 +75,10 @@ class InwardInvoice(Base):
     hsn_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
     is_rcm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     itc_blocked_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    itc_2b_status: Mapped[ITC2BStatus] = mapped_column(
+        SAEnum(ITC2BStatus, values_callable=lambda x: [e.value for e in x], name="itc2bstatus"),
+        default=ITC2BStatus.UNVERIFIED,
+        nullable=False,
+    )
     source: Mapped[str] = mapped_column(String(50), default="manual")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

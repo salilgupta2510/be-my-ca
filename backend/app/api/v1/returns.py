@@ -4,6 +4,7 @@ import string
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,13 +12,13 @@ from sqlalchemy import select
 
 from app.core.database import get_db
 from app.models.business import Business
-from app.models.invoice import OutwardInvoice, InwardInvoice, InvoiceType
+from app.models.invoice import OutwardInvoice, InwardInvoice, InvoiceType, ITC2BStatus
 from app.models.gst import ReconciliationResult, ReconciliationStatus
 from app.models.gst_return import GSTReturn, ReturnType, ReturnStatus
 from app.models.user import User
 from app.schemas.returns import GSTReturnOut
 from app.api.deps import get_current_user
-from app.services.gst_engine import check_itc_eligibility, compute_itc_setoff
+from app.services.gst_engine import check_itc_eligibility, compute_itc_setoff, get_compliance_calendar, get_return_due_date
 
 router = APIRouter(prefix="/returns", tags=["returns"])
 
@@ -170,6 +171,11 @@ async def compute_gstr3b(
     )).all()
     reconciliation_done = len(recon_results) > 0
 
+    # Determine if 2B lock has been applied for this period
+    gstr2b_lock_applied = any(
+        inv.itc_2b_status != ITC2BStatus.UNVERIFIED for inv in inward
+    )
+
     out_igst = Decimal(str(sum(_f(i.igst) for i in outward)))
     out_cgst = Decimal(str(sum(_f(i.cgst) for i in outward)))
     out_sgst = Decimal(str(sum(_f(i.sgst) for i in outward)))
@@ -179,9 +185,22 @@ async def compute_gstr3b(
     itc_igst = itc_cgst = itc_sgst = Decimal("0")
     blocked_count = 0
     expired_count = 0
+    missing_2b_count = 0
 
-    if reconciliation_done:
-        for inv in inward:
+    for inv in inward:
+        # If 2B lock applied: skip invoices missing from 2B (unless user accepted risk)
+        if gstr2b_lock_applied and inv.itc_2b_status == ITC2BStatus.MISSING_IN_2B:
+            missing_2b_count += 1
+            blocked_count += 1
+            continue
+
+        # Skip unverified invoices when 2B lock is active (conservative)
+        if gstr2b_lock_applied and inv.itc_2b_status == ITC2BStatus.UNVERIFIED:
+            missing_2b_count += 1
+            continue
+
+        # Standard eligibility check (Section 16(4) time-bar + Section 17(5) blocks)
+        if reconciliation_done or gstr2b_lock_applied:
             result = check_itc_eligibility(
                 invoice_id=str(inv.id),
                 supplier_name=inv.supplier_name,
@@ -198,7 +217,8 @@ async def compute_gstr3b(
                 itc_cgst += result.cgst
                 itc_sgst += result.sgst
             else:
-                if "expired" in result.blocked_reason.lower() or "time limit" in result.blocked_reason.lower():
+                reason_lower = result.blocked_reason.lower()
+                if "lapsed" in reason_lower or "time" in reason_lower or "expir" in reason_lower:
                     expired_count += 1
                 else:
                     blocked_count += 1
@@ -235,6 +255,8 @@ async def compute_gstr3b(
         },
         "itc_blocked_count": blocked_count,
         "itc_expired_count": expired_count,
+        "itc_missing_2b_count": missing_2b_count,
+        "gstr2b_lock_applied": gstr2b_lock_applied,
         "reconciliation_done": reconciliation_done,
         "invoice_count": len(outward),
     }
@@ -595,6 +617,41 @@ async def file_return(
     if gst_return.status == ReturnStatus.FILED:
         raise HTTPException(409, "Return already filed")
 
+    # Sequencer: block GSTR-3B filing if GSTR-1 not filed for same period
+    if gst_return.return_type == ReturnType.GSTR3B:
+        gstr1 = await _get_or_none(db, business.id, gst_return.period, ReturnType.GSTR1)
+        if not gstr1 or gstr1.status != ReturnStatus.FILED:
+            raise HTTPException(
+                422,
+                f"GSTR-1 for {gst_return.period} must be filed before GSTR-3B. "
+                "File GSTR-1 first to maintain outward supply consistency."
+            )
+        # Block if mismatch unresolved
+        mismatch = _compute_mismatch(gstr1, gst_return)
+        if mismatch["has_mismatch"]:
+            raise HTTPException(
+                422,
+                f"GSTR-1 vs GSTR-3B outward tax mismatch exceeds 1% threshold "
+                f"(delta ₹{mismatch['total_tax_delta']:.2f}). "
+                "Recompute GSTR-3B or correct invoices before filing."
+            )
+
+    # Sequencer: block GSTR-9 filing if any monthly GSTR-3B not filed
+    if gst_return.return_type == ReturnType.GSTR9:
+        fy = gst_return.period
+        periods = _fy_periods(fy)
+        unfiled = []
+        for p in periods:
+            r = await _get_or_none(db, business.id, p, ReturnType.GSTR3B)
+            if not r or r.status != ReturnStatus.FILED:
+                unfiled.append(p)
+        if unfiled:
+            raise HTTPException(
+                422,
+                f"GSTR-3B not filed for periods: {', '.join(unfiled)}. "
+                "File all 12 monthly returns before submitting GSTR-9."
+            )
+
     await asyncio.sleep(2)
 
     suffix = "".join(random.choices(string.digits + string.ascii_uppercase, k=6))
@@ -605,3 +662,268 @@ async def file_return(
     await db.commit()
     await db.refresh(gst_return)
     return gst_return
+
+
+# ─── Mismatch Helper ─────────────────────────────────────────────────────────
+
+MISMATCH_THRESHOLD_PCT = Decimal("1.0")  # 1% tolerance
+
+
+def _compute_mismatch(gstr1: GSTReturn, gstr3b: GSTReturn) -> dict[str, Any]:
+    """Compare outward tax declared in GSTR-1 vs GSTR-3B."""
+    g1 = gstr1.computed_payload or {}
+    g3 = gstr3b.computed_payload or {}
+
+    g1_summary = g1.get("summary", {})
+    g3_out = g3.get("outward_tax_liability", {})
+
+    g1_igst = Decimal(str(g1_summary.get("total_igst", 0)))
+    g1_cgst = Decimal(str(g1_summary.get("total_cgst", 0)))
+    g1_sgst = Decimal(str(g1_summary.get("total_sgst", 0)))
+    g1_total = g1_igst + g1_cgst + g1_sgst
+
+    g3_igst = Decimal(str(g3_out.get("igst", 0)))
+    g3_cgst = Decimal(str(g3_out.get("cgst", 0)))
+    g3_sgst = Decimal(str(g3_out.get("sgst", 0)))
+    g3_total = g3_igst + g3_cgst + g3_sgst
+
+    delta = abs(g1_total - g3_total)
+    pct = (delta / g1_total * 100) if g1_total > 0 else Decimal("0")
+    has_mismatch = pct > MISMATCH_THRESHOLD_PCT
+
+    return {
+        "has_mismatch": has_mismatch,
+        "gstr1_total_tax": float(g1_total),
+        "gstr3b_total_tax": float(g3_total),
+        "total_tax_delta": float(delta),
+        "delta_pct": float(pct),
+        "igst_delta": float(abs(g1_igst - g3_igst)),
+        "cgst_delta": float(abs(g1_cgst - g3_cgst)),
+        "sgst_delta": float(abs(g1_sgst - g3_sgst)),
+    }
+
+
+# ─── Mismatch Report Endpoint ─────────────────────────────────────────────────
+
+@router.get("/mismatch-report")
+async def get_mismatch_report(
+    period: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Compare GSTR-1 and GSTR-3B outward tax figures for a period.
+    GSTN's ANSR system auto-flags divergence > 1% — catch it here first.
+    """
+    business = await _get_business(db, current_user)
+    gstr1 = await _get_or_none(db, business.id, period, ReturnType.GSTR1)
+    gstr3b = await _get_or_none(db, business.id, period, ReturnType.GSTR3B)
+
+    if not gstr1:
+        raise HTTPException(404, f"GSTR-1 not computed for {period}. Run compute first.")
+    if not gstr3b:
+        raise HTTPException(404, f"GSTR-3B not computed for {period}. Run compute first.")
+
+    mismatch = _compute_mismatch(gstr1, gstr3b)
+    return {
+        "period": period,
+        "gstr1_status": gstr1.status.value,
+        "gstr3b_status": gstr3b.status.value,
+        **mismatch,
+        "risk": (
+            "HIGH — GSTN ANSR system will flag this. Correct before filing."
+            if mismatch["has_mismatch"]
+            else "OK — within 1% tolerance."
+        ),
+    }
+
+
+# ─── Compliance Status Dashboard ─────────────────────────────────────────────
+
+@router.get("/compliance-status")
+async def get_compliance_status(
+    period: str = Query(..., description="YYYY-MM"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Full compliance dependency tree for a period:
+    - GSTR-1 status + due date
+    - GSTR-3B status + due date + blocking issues
+    - Mismatch flag
+    - ITC reconciliation status
+    """
+    from datetime import date
+    business = await _get_business(db, current_user)
+
+    gstr1 = await _get_or_none(db, business.id, period, ReturnType.GSTR1)
+    gstr3b = await _get_or_none(db, business.id, period, ReturnType.GSTR3B)
+
+    calendar = get_compliance_calendar(period, business.is_composition)
+    due_map = {d.return_type: d for d in calendar}
+
+    gstr1_due = due_map.get("GSTR-1")
+    gstr3b_due = due_map.get("GSTR-3B")
+
+    blockers: list[str] = []
+
+    if not gstr1 or gstr1.status != ReturnStatus.FILED:
+        blockers.append("GSTR-1 not filed — required before GSTR-3B filing")
+
+    mismatch_info = None
+    if gstr1 and gstr3b:
+        mismatch_info = _compute_mismatch(gstr1, gstr3b)
+        if mismatch_info["has_mismatch"]:
+            blockers.append(
+                f"GSTR-1 vs GSTR-3B mismatch: ₹{mismatch_info['total_tax_delta']:.2f} "
+                f"({mismatch_info['delta_pct']:.2f}%)"
+            )
+
+    recon_results = (await db.scalars(
+        select(ReconciliationResult).where(
+            ReconciliationResult.user_id == current_user.id,
+            ReconciliationResult.period == period,
+        )
+    )).all()
+    unresolved_recon = sum(1 for r in recon_results if not r.resolved)
+    if unresolved_recon > 0:
+        blockers.append(f"{unresolved_recon} unresolved 2B reconciliation mismatches — ITC at risk")
+
+    return {
+        "period": period,
+        "business_gstin": business.gstin,
+        "is_composition": business.is_composition,
+        "returns": {
+            "gstr1": {
+                "status": gstr1.status.value if gstr1 else "not_computed",
+                "due_date": gstr1_due.due_date.isoformat() if gstr1_due else None,
+                "days_remaining": gstr1_due.days_remaining if gstr1_due else None,
+                "is_overdue": gstr1_due.is_overdue if gstr1_due else None,
+                "arn": gstr1.arn if gstr1 else None,
+            },
+            "gstr3b": {
+                "status": gstr3b.status.value if gstr3b else "not_computed",
+                "due_date": gstr3b_due.due_date.isoformat() if gstr3b_due else None,
+                "days_remaining": gstr3b_due.days_remaining if gstr3b_due else None,
+                "is_overdue": gstr3b_due.is_overdue if gstr3b_due else None,
+                "arn": gstr3b.arn if gstr3b else None,
+            },
+        },
+        "mismatch": mismatch_info,
+        "recon_summary": {
+            "total_results": len(recon_results),
+            "unresolved": unresolved_recon,
+        },
+        "blockers": blockers,
+        "ready_to_file_gstr3b": len(blockers) == 0,
+    }
+
+
+# ─── GSTR-2B Hard-Lock ────────────────────────────────────────────────────────
+
+@router.post("/gstr2b-lock")
+async def apply_gstr2b_lock(
+    period: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Section 16(2)(aa): run 2B reconciliation and stamp each inward invoice
+    with its itc_2b_status. After this, GSTR-3B compute will only claim ITC
+    for MATCHED or ACCEPTED_WITH_RISK invoices.
+
+    Matching logic: match by supplier_gstin + invoice_number.
+    Real production use would match against actual GSTN 2B API data.
+    Here we match against GSTR2BRecord rows already imported for the period.
+    """
+    from app.models.gst import GSTR2BRecord
+    business = await _get_business(db, current_user)
+
+    inward = (await db.scalars(
+        select(InwardInvoice).where(
+            InwardInvoice.business_id == business.id,
+            InwardInvoice.period == period,
+        )
+    )).all()
+
+    gstr2b_records = (await db.scalars(
+        select(GSTR2BRecord).where(
+            GSTR2BRecord.user_id == current_user.id,
+            GSTR2BRecord.period == period,
+        )
+    )).all()
+
+    # Build lookup: (supplier_gstin_upper, invoice_number_upper) → True
+    gstr2b_index: set[tuple[str, str]] = {
+        (r.supplier_gstin.upper(), r.invoice_number.upper())
+        for r in gstr2b_records
+    }
+
+    matched = missing = already_locked = 0
+
+    for inv in inward:
+        if inv.itc_2b_status == ITC2BStatus.ACCEPTED_WITH_RISK:
+            already_locked += 1
+            continue
+
+        gstin_key = (inv.supplier_gstin or "").upper()
+        inv_key = inv.invoice_number.upper()
+
+        if (gstin_key, inv_key) in gstr2b_index:
+            inv.itc_2b_status = ITC2BStatus.MATCHED
+            matched += 1
+        else:
+            # No GSTIN invoices (URD / composition) can't appear in 2B — treat as risk
+            if not inv.supplier_gstin:
+                inv.itc_2b_status = ITC2BStatus.ACCEPTED_WITH_RISK
+                already_locked += 1
+            else:
+                inv.itc_2b_status = ITC2BStatus.MISSING_IN_2B
+                missing += 1
+
+    await db.commit()
+
+    return {
+        "period": period,
+        "total_invoices": len(inward),
+        "matched": matched,
+        "missing_in_2b": missing,
+        "accepted_with_risk": already_locked,
+        "gstr2b_records_available": len(gstr2b_records),
+        "message": (
+            f"{missing} invoices missing from GSTR-2B — ITC of these will be blocked in GSTR-3B. "
+            "Use POST /returns/gstr2b-accept-risk/{invoice_id} to override with risk acknowledgement."
+            if missing > 0
+            else "All invoices matched in GSTR-2B. ITC fully claimable."
+        ),
+    }
+
+
+@router.post("/gstr2b-accept-risk/{invoice_id}")
+async def accept_2b_risk(
+    invoice_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Override 2B lock for a specific invoice.
+    User explicitly acknowledges ITC risk under Section 16(2)(aa).
+    GSTN may raise a demand — this is an informed business decision.
+    """
+    business = await _get_business(db, current_user)
+    inv = await db.get(InwardInvoice, uuid.UUID(invoice_id))
+    if not inv or inv.business_id != business.id:
+        raise HTTPException(404, "Invoice not found")
+    if inv.itc_2b_status != ITC2BStatus.MISSING_IN_2B:
+        raise HTTPException(400, f"Invoice status is '{inv.itc_2b_status.value}' — only MISSING_IN_2B invoices can be risk-accepted")
+
+    inv.itc_2b_status = ITC2BStatus.ACCEPTED_WITH_RISK
+    await db.commit()
+    return {
+        "invoice_id": invoice_id,
+        "new_status": ITC2BStatus.ACCEPTED_WITH_RISK.value,
+        "warning": (
+            "ITC claimed without 2B match. Supplier GSTN may issue demand under Section 73/74 "
+            "if supplier fails to file GSTR-1. Ensure supplier files before next recon."
+        ),
+    }

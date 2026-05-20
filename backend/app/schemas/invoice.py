@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
 from datetime import date, datetime
 from uuid import UUID
-from app.models.invoice import InvoiceType, InvoiceSource
+from app.models.invoice import InvoiceType, InvoiceSource, ITC2BStatus
 
 
 class OutwardInvoiceCreate(BaseModel):
@@ -83,5 +83,6 @@ class InwardInvoiceOut(BaseModel):
     hsn_code: str | None
     is_rcm: bool
     itc_blocked_reason: str | None
+    itc_2b_status: ITC2BStatus
     source: str
     created_at: datetime

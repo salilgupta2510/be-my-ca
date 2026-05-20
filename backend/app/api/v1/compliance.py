@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +30,7 @@ from app.services.gst_engine import (
     check_itc_eligibility,
     compute_itc_setoff,
 )
+from app.services.itc_monitor import scan_itc_expiry
 
 router = APIRouter(prefix="/compliance", tags=["compliance"])
 
@@ -221,3 +223,49 @@ async def get_itc_setoff(
         sgst_credit_remaining=result.sgst_credit_remaining,
         total_cash_required=result.total_cash_required,
     )
+
+
+@router.get("/itc-expiry-alerts")
+async def get_itc_expiry_alerts(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Scan all inward invoices for ITC time-bar risk (Section 16(4)).
+    Returns lapsed and about-to-lapse invoices, sorted by urgency.
+    Side-effect: marks newly lapsed invoices in DB.
+    """
+    business = await _get_business(db, current_user)
+    alerts = await scan_itc_expiry(db, str(business.id))
+
+    lapsed = [a for a in alerts if a.is_lapsed]
+    expiring = [a for a in alerts if not a.is_lapsed]
+
+    total_lapsed_itc = sum(a.total_itc_at_risk for a in lapsed)
+    total_expiring_itc = sum(a.total_itc_at_risk for a in expiring)
+
+    def _alert_dict(a) -> dict:
+        return {
+            "invoice_id": a.invoice_id,
+            "supplier_name": a.supplier_name,
+            "invoice_number": a.invoice_number,
+            "invoice_date": a.invoice_date.isoformat(),
+            "itc_deadline": a.itc_deadline.isoformat(),
+            "days_remaining": a.days_remaining,
+            "is_lapsed": a.is_lapsed,
+            "igst": float(a.igst),
+            "cgst": float(a.cgst),
+            "sgst": float(a.sgst),
+            "total_itc_at_risk": float(a.total_itc_at_risk),
+        }
+
+    return {
+        "summary": {
+            "lapsed_count": len(lapsed),
+            "expiring_count": len(expiring),
+            "total_lapsed_itc": float(total_lapsed_itc),
+            "total_expiring_itc": float(total_expiring_itc),
+        },
+        "lapsed": [_alert_dict(a) for a in lapsed],
+        "expiring_soon": [_alert_dict(a) for a in expiring],
+    }

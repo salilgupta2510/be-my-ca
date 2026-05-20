@@ -17,6 +17,8 @@ from app.core.database import get_db
 from app.models.business import Business
 from app.models.invoice import OutwardInvoice, InwardInvoice, InvoiceSource, InvoiceType
 from app.models.user import User
+from app.services.rcm_engine import classify_inward_invoice
+from app.services.itc_monitor import check_itc_expiry_at_create
 from app.schemas.invoice import (
     OutwardInvoiceCreate, OutwardInvoiceUpdate, OutwardInvoiceOut,
     InwardInvoiceCreate, InwardInvoiceUpdate, InwardInvoiceOut,
@@ -256,7 +258,25 @@ async def create_inward(
     current_user: User = Depends(get_current_user),
 ):
     business = await _get_business(db, current_user)
-    inv = InwardInvoice(id=uuid.uuid4(), business_id=business.id, **body.model_dump())
+    data = body.model_dump()
+
+    # Auto-classify RCM and Section 17(5) blocks unless caller already set them
+    if not data.get("is_rcm") and not data.get("itc_blocked_reason"):
+        rcm = classify_inward_invoice(
+            supplier_gstin=data.get("supplier_gstin"),
+            hsn_code=data.get("hsn_code"),
+            supplier_name=data["supplier_name"],
+        )
+        data["is_rcm"] = rcm.is_rcm
+        if rcm.itc_blocked_reason:
+            data["itc_blocked_reason"] = rcm.itc_blocked_reason
+
+    # Check ITC time-bar at creation — mark lapsed immediately if overdue
+    lapse_reason = check_itc_expiry_at_create(data["invoice_date"])
+    if lapse_reason and not data.get("itc_blocked_reason"):
+        data["itc_blocked_reason"] = lapse_reason
+
+    inv = InwardInvoice(id=uuid.uuid4(), business_id=business.id, **data)
     db.add(inv)
     await db.commit()
     await db.refresh(inv)
