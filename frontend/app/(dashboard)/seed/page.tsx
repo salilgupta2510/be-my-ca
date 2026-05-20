@@ -48,6 +48,56 @@ const SAMPLE_INWARD = [
   { supplier_name: "Stationery & Office Depot", supplier_gstin: "27AABCS9987M1ZB", invoice_number: "SOD/2025/JAN/012", invoice_date: "2025-01-22", taxable_value: "9800", igst: "0", cgst: "882", sgst: "882" },
 ];
 
+const GST_RATES = [5, 12, 18, 28];
+
+function randAmount(min: number, max: number) {
+  return Math.round((Math.random() * (max - min) + min) / 500) * 500;
+}
+
+function randSuffix() {
+  return Math.floor(Math.random() * 90000 + 10000).toString();
+}
+
+function randomizeOutward(tpl: typeof SAMPLE_OUTWARD[0]) {
+  const ranges: Record<string, [number, number]> = {
+    b2b:       [30000,  500000],
+    b2c_small: [5000,   50000],
+    b2c_large: [100000, 400000],
+    export:    [100000, 600000],
+  };
+  const [lo, hi] = ranges[tpl.invoice_type] ?? [10000, 200000];
+  const taxable = randAmount(lo, hi);
+  const isExport = tpl.invoice_type === "export";
+  const rate = isExport ? 0 : GST_RATES[Math.floor(Math.random() * GST_RATES.length)];
+  const isIGST = tpl.igst !== "0";
+  const igst = isIGST && !isExport ? Math.round(taxable * rate / 100) : 0;
+  const cgst = !isIGST && !isExport ? Math.round(taxable * rate / 200) : 0;
+  return {
+    ...tpl,
+    taxable_value: taxable.toString(),
+    igst: igst.toString(),
+    cgst: cgst.toString(),
+    sgst: cgst.toString(),
+    invoice_number: tpl.invoice_number.replace(/\d+$/, randSuffix()),
+  };
+}
+
+function randomizeInward(tpl: typeof SAMPLE_INWARD[0]) {
+  const taxable = randAmount(3000, 120000);
+  const rate = GST_RATES[Math.floor(Math.random() * GST_RATES.length)];
+  const isIGST = tpl.igst !== "0";
+  const igst = isIGST ? Math.round(taxable * rate / 100) : 0;
+  const cgst = !isIGST ? Math.round(taxable * rate / 200) : 0;
+  return {
+    ...tpl,
+    taxable_value: taxable.toString(),
+    igst: igst.toString(),
+    cgst: cgst.toString(),
+    sgst: cgst.toString(),
+    invoice_number: tpl.invoice_number.replace(/\d+$/, randSuffix()),
+  };
+}
+
 interface Result { type: "outward" | "inward"; invoice_number: string; ok: boolean; error?: string; }
 
 export default function SampleDataPage() {
@@ -72,20 +122,22 @@ export default function SampleDataPage() {
     const newResults: Result[] = [];
 
     for (const inv of SAMPLE_OUTWARD) {
+      const randomized = randomizeOutward(inv);
       const res = await fetch(`${API}/invoices/outward`, {
         method: "POST", headers: authH(true),
-        body: JSON.stringify({ ...inv, period, invoice_date: periodDate(inv.invoice_date) }),
+        body: JSON.stringify({ ...randomized, period, invoice_date: periodDate(inv.invoice_date) }),
       });
-      newResults.push({ type: "outward", invoice_number: inv.invoice_number, ok: res.ok, error: res.ok ? undefined : (await res.json()).detail });
+      newResults.push({ type: "outward", invoice_number: randomized.invoice_number, ok: res.ok, error: res.ok ? undefined : (await res.json()).detail });
       setResults([...newResults]);
     }
 
     for (const inv of SAMPLE_INWARD) {
+      const randomized = randomizeInward(inv);
       const res = await fetch(`${API}/invoices/inward`, {
         method: "POST", headers: authH(true),
-        body: JSON.stringify({ ...inv, period, invoice_date: periodDate(inv.invoice_date) }),
+        body: JSON.stringify({ ...randomized, period, invoice_date: periodDate(inv.invoice_date) }),
       });
-      newResults.push({ type: "inward", invoice_number: inv.invoice_number, ok: res.ok, error: res.ok ? undefined : (await res.json()).detail });
+      newResults.push({ type: "inward", invoice_number: randomized.invoice_number, ok: res.ok, error: res.ok ? undefined : (await res.json()).detail });
       setResults([...newResults]);
     }
 
