@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +9,9 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cacheGet, cacheSet } from "@/lib/cache";
 import { downloadCsv } from "@/lib/csv";
+import { usePeriod } from "@/lib/period";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-
-function getPeriod() {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("bemyca_period") ?? "";
-}
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH() { return { Authorization: `Bearer ${token()}` }; }
@@ -47,7 +43,7 @@ function ListSkeleton() {
 }
 
 export default function InwardListPage() {
-  const [period] = useState(getPeriod);
+  const [period] = usePeriod();
   const cacheKey = `invoices:inward:${period}`;
   const cached = cacheGet<Invoice[]>(cacheKey);
   const [invoices, setInvoices] = useState<Invoice[]>(cached ?? []);

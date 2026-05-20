@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,13 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, RefreshCw, CheckCircle, AlertTriangle, FileCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { usePeriod } from "@/lib/period";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-
-function getPeriod() {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("bemyca_period") ?? "";
-}
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -79,7 +75,7 @@ function PageSkeleton() {
 }
 
 export default function GSTR3BPage() {
-  const [period] = useState(getPeriod);
+  const [period] = usePeriod();
   const cacheKey = `gstr3b:${period}`;
   const cached = cacheGet<GSTR3BReturn | "none">(cacheKey);
   const [ret, setRet] = useState<GSTR3BReturn | null>(

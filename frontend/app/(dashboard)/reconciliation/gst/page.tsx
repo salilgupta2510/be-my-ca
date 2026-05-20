@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cacheGet, cacheSet, cacheClear } from "@/lib/cache";
+import { usePeriod } from "@/lib/period";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-
-function getPeriod() {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("bemyca_period") ?? "";
-}
 
 function token() { return typeof window !== "undefined" ? localStorage.getItem("bemyca_token") ?? "" : ""; }
 function authH(json = false) {
@@ -60,7 +56,7 @@ function TableSkeleton() {
 }
 
 export default function GSTReconciliationPage() {
-  const [period] = useState(getPeriod);
+  const [period] = usePeriod();
   const cacheKey = `reconciliation:${period}`;
   const cached = cacheGet<ReconRow[]>(cacheKey);
   const [rows, setRows] = useState<ReconRow[]>(cached ?? []);

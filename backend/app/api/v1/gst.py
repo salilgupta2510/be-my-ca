@@ -232,3 +232,25 @@ async def get_reconciliation_summary(
         total_itc_eligible=Decimal("0"),
         total_itc_at_risk=Decimal("0"),
     )
+
+
+@router.get("/filed-periods")
+async def get_filed_periods(
+    current_user: User = Depends(get_current_user),
+):
+    """Mock GSP API: returns periods for which GST returns have been filed."""
+    from datetime import date
+    today = date.today()
+    periods = []
+    for i in range(1, 13):
+        month = today.month - i
+        year = today.year
+        while month <= 0:
+            month += 12
+            year -= 1
+        periods.append({
+            "period": f"{year}-{month:02d}",
+            "gstr1_status": "filed" if i <= 6 else "not_filed",
+            "gstr3b_status": "filed" if i <= 5 else "not_filed",
+        })
+    return {"periods": periods, "source": "mock_gsp"}

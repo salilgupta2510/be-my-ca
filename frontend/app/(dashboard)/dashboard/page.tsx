@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import { usePeriod } from "@/lib/period";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, FileText, Loader2, PlusCircle, ReceiptText, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { cacheGet, cacheSet } from "@/lib/cache";
@@ -22,25 +22,11 @@ function fmt(n: number) {
   return "₹" + n.toLocaleString("en-IN");
 }
 
-function generatePeriods(): string[] {
-  const periods: string[] = [];
-  const now = new Date();
-  for (let i = 0; i < 24; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    periods.push(`${y}-${m}`);
-  }
-  return periods;
-}
-
 function formatPeriodLabel(period: string): string {
   const [year, month] = period.split("-");
   const date = new Date(Number(year), Number(month) - 1, 1);
   return date.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 }
-
-const PERIODS = generatePeriods();
 
 function last6Periods(current: string): string[] {
   const [y, m] = current.split("-").map(Number);
@@ -112,12 +98,7 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
-  const [period, setPeriod] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("bemyca_period") ?? PERIODS[0];
-    }
-    return PERIODS[0];
-  });
+  const [period] = usePeriod();
 
   const cacheKey = `dashboard:${period}`;
   const cached = cacheGet<CacheData>(cacheKey);
@@ -185,14 +166,6 @@ export default function DashboardPage() {
     load(!!cached);
   }, [period]);
 
-  function handlePeriodChange(value: string | null) {
-    if (!value) return;
-    setPeriod(value);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("bemyca_period", value);
-    }
-  }
-
   if (loading) return <DashboardSkeleton />;
 
   const gstr1Due = filingDeadline(period, 11);
@@ -245,25 +218,11 @@ export default function DashboardPage() {
             {business ? `GSTIN ${business.gstin}` : "GST Dashboard"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Select value={period} onValueChange={handlePeriodChange}>
-            <SelectTrigger className="w-48 bg-slate-900 border-slate-700 text-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700 text-white">
-              {PERIODS.map((p) => (
-                <SelectItem key={p} value={p} className="text-white hover:bg-slate-800 focus:bg-slate-800">
-                  {formatPeriodLabel(p)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Link href="/invoices/outward/new">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <PlusCircle className="w-4 h-4 mr-2" /> Add Invoice
-            </Button>
-          </Link>
-        </div>
+        <Link href="/invoices/outward/new">
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <PlusCircle className="w-4 h-4 mr-2" /> Add Invoice
+          </Button>
+        </Link>
       </div>
 
       {/* GST liability card */}

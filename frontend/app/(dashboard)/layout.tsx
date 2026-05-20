@@ -4,6 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown, BookOpen, FlaskConical, Calculator, Wallet, BarChart3 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { PeriodSelector } from "@/components/period-selector";
+import { usePeriod } from "@/lib/period";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -40,6 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [period, setPeriod] = usePeriod();
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>();
     for (const item of NAV) {
@@ -156,11 +159,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center gap-4 lg:hidden">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="text-slate-400">
+        <header className="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="text-slate-400 lg:hidden">
             <Menu className="w-5 h-5" />
           </Button>
-          <h1 className="text-white font-semibold">BeMyCa</h1>
+          <h1 className="text-white font-semibold lg:hidden">BeMyCa</h1>
+          <div className="flex-1" />
+          <PeriodSelector period={period} onSelect={setPeriod} />
         </header>
         <main className="flex-1 overflow-y-auto p-6">
           {children}
