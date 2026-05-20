@@ -10,7 +10,7 @@ DATABASE_URL = _re.sub(
     .replace("sslmode=require", "ssl=require")
 )
 
-engine = create_async_engine(DATABASE_URL, echo=settings.DEBUG, pool_pre_ping=True)
+engine = create_async_engine(DATABASE_URL, echo=settings.DEBUG)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
