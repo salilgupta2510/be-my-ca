@@ -3,13 +3,11 @@ FROM python:3.12-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev git \
+    gcc libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir "git+https://github.com/salilgupta2510/be-my-ca.git@main#subdirectory=gst-engine"
-
 COPY requirements.txt .
-RUN grep -v 'gst-engine' requirements.txt | pip install --no-cache-dir -r /dev/stdin
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 

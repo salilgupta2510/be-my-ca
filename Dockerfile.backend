@@ -6,9 +6,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install gst-engine (editable so rules/ path resolution works)
 COPY gst-engine /gst-engine
-RUN pip install --no-cache-dir -e /gst-engine
+RUN pip install --no-cache-dir /gst-engine
 
 # Install backend deps (strip the local -e ../gst-engine line — already installed above)
 COPY backend/requirements.txt .
