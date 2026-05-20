@@ -8,22 +8,22 @@ import PublicNav from "@/components/public-nav";
 
 const plans = [
   {
-    name: "Starter",
+    name: "Trial",
     price: { monthly: 0, annual: 0 },
-    tagline: "For solopreneurs just getting started",
-    cta: "Request access",
+    tagline: "Try Pro free for 14 days — no card required",
+    cta: "Start free trial",
     highlight: false,
     features: [
       { text: "1 business / GSTIN", included: true },
-      { text: "Up to 20 invoices / month", included: true },
+      { text: "Unlimited invoices", included: true },
       { text: "Manual invoice entry", included: true },
       { text: "GSTR-1 computation", included: true },
       { text: "Deadline tracker", included: true },
-      { text: "AI photo OCR upload", included: false },
-      { text: "GSTR-3B computation", included: false },
-      { text: "GSTR-2B reconciliation", included: false },
+      { text: "AI photo OCR upload", included: true },
+      { text: "GSTR-3B computation", included: true },
+      { text: "GSTR-2B reconciliation", included: true },
       { text: "CSV bulk import", included: false },
-      { text: "Email support", included: false },
+      { text: "Email support", included: true },
     ],
   },
   {
@@ -96,15 +96,16 @@ const faqs = [
 
 const compareRows = [
   { label: "Businesses / GSTINs", values: ["1", "1", "5"] },
-  { label: "Invoices per month", values: ["20", "Unlimited", "Unlimited"] },
+  { label: "Invoices per month", values: ["Unlimited", "Unlimited", "Unlimited"] },
   { label: "Manual invoice entry", values: [true, true, true] },
-  { label: "AI photo OCR", values: [false, true, true] },
+  { label: "AI photo OCR", values: [true, true, true] },
   { label: "GSTR-1 computation", values: [true, true, true] },
-  { label: "GSTR-3B computation", values: [false, true, true] },
-  { label: "GSTR-2B reconciliation", values: [false, true, true] },
+  { label: "GSTR-3B computation", values: [true, true, true] },
+  { label: "GSTR-2B reconciliation", values: [true, true, true] },
   { label: "CSV bulk import", values: [false, false, true] },
   { label: "Deadline alerts", values: [true, true, true] },
-  { label: "Support", values: ["—", "Email", "Phone + Email"] },
+  { label: "Trial duration", values: ["14 days", "—", "—"] },
+  { label: "Support", values: ["Email", "Email", "Phone + Email"] },
 ];
 
 export default function PricingPage() {
@@ -257,8 +258,8 @@ export default function PricingPage() {
                   <div className="mb-8">
                     {plan.price.monthly === 0 ? (
                       <div>
-                        <span className="text-5xl font-black text-white">Free</span>
-                        <p className="text-slate-500 text-sm mt-1.5">forever · no card required</p>
+                        <span className="text-5xl font-black text-white">14 days</span>
+                        <p className="text-slate-400 text-sm mt-1.5">free · then ₹499/mo · no card required</p>
                       </div>
                     ) : (
                       <div>
@@ -318,7 +319,7 @@ export default function PricingPage() {
         </div>
 
         <p className="text-center text-slate-600 text-xs mt-10">
-          All plans include: 30-day money-back guarantee · TLS encryption · Unlimited data retention
+          Trial includes full Pro features for 14 days · No card required · TLS encryption · Unlimited data retention
         </p>
       </div>
 
