@@ -16,6 +16,8 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.business import Business
 from app.models.invoice import OutwardInvoice, InwardInvoice, InvoiceSource, InvoiceType
+from app.models.gst import ReconciliationResult
+from app.models.gst_return import GSTReturn
 from app.models.user import User
 from app.services.rcm_engine import classify_inward_invoice
 from app.services.itc_monitor import check_itc_expiry_at_create
@@ -313,4 +315,41 @@ async def delete_inward(
     if not inv or inv.business_id != business.id:
         raise HTTPException(404, "Invoice not found")
     await db.delete(inv)
+    await db.commit()
+
+
+@router.delete("/period/{period}", status_code=204)
+async def clear_period(
+    period: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete all invoices + reconciliation results + computed returns for a period."""
+    business = await _get_business(db, current_user)
+    # Reconciliation first (FK references inward_invoices)
+    await db.execute(
+        delete(ReconciliationResult).where(
+            ReconciliationResult.user_id == current_user.id,
+            ReconciliationResult.period == period,
+        )
+    )
+    # Computed monthly returns (GSTR-1, GSTR-3B, GSTR-4)
+    await db.execute(
+        delete(GSTReturn).where(
+            GSTReturn.business_id == business.id,
+            GSTReturn.period == period,
+        )
+    )
+    await db.execute(
+        delete(OutwardInvoice).where(
+            OutwardInvoice.business_id == business.id,
+            OutwardInvoice.period == period,
+        )
+    )
+    await db.execute(
+        delete(InwardInvoice).where(
+            InwardInvoice.business_id == business.id,
+            InwardInvoice.period == period,
+        )
+    )
     await db.commit()

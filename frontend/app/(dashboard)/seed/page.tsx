@@ -112,7 +112,7 @@ export default function SampleDataPage() {
   }
 
   function clearCaches() {
-    [`dashboard:${period}`, `invoices:outward:${period}`, `invoices:inward:${period}`, `reconciliation:${period}`, `gstr1:${period}`, `gstr3b:${period}`].forEach(cacheClear);
+    [`dashboard:${period}`, `invoices:outward:${period}`, `invoices:inward:${period}`, `reconciliation:${period}`, `gstr1:${period}`, `gstr3b:${period}`, `gstr4:${period}`].forEach(cacheClear);
   }
 
   async function seed() {
@@ -150,23 +150,15 @@ export default function SampleDataPage() {
   }
 
   async function clearAll() {
-    if (!confirm(`Delete ALL invoices for period ${period}? This cannot be undone.`)) return;
+    if (!confirm(`Delete ALL invoices and computed returns for period ${period}? This cannot be undone.`)) return;
     setClearing(true);
     try {
-      const [outRes, inRes] = await Promise.all([
-        fetch(`${API}/invoices/outward?period=${period}`, { headers: authH() }),
-        fetch(`${API}/invoices/inward?period=${period}`, { headers: authH() }),
-      ]);
-      const outInvs = outRes.ok ? await outRes.json() : [];
-      const inInvs = inRes.ok ? await inRes.json() : [];
-      await Promise.all([
-        ...outInvs.map((i: { id: string }) => fetch(`${API}/invoices/outward/${i.id}`, { method: "DELETE", headers: authH() })),
-        ...inInvs.map((i: { id: string }) => fetch(`${API}/invoices/inward/${i.id}`, { method: "DELETE", headers: authH() })),
-      ]);
+      const res = await fetch(`${API}/invoices/period/${period}`, { method: "DELETE", headers: authH() });
+      if (!res.ok) throw new Error();
       clearCaches();
       setResults([]);
       setDone(false);
-      toast.success(`Deleted ${outInvs.length + inInvs.length} invoices`);
+      toast.success(`Cleared all data for period ${period}`);
     } catch {
       toast.error("Clear failed");
     } finally {
