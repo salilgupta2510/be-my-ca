@@ -1,0 +1,21 @@
+.git
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.env
+**/.env.*
+**/*.log
+
+# backend
+backend/.venv
+backend/scripts/
+
+# frontend (not needed in backend image)
+frontend/
+frontend/node_modules/
+frontend/.next/
+
+# gst-engine build artifacts
+gst-engine/.pytest_cache/
+gst-engine/*.egg-info/
+gst-engine/tests/
