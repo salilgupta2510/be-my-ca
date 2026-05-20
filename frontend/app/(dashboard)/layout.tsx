@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown, BookOpen, FlaskConical, Calculator, Wallet, BarChart3 } from "lucide-react";
+import { LayoutDashboard, FileText, ArrowUpCircle, ArrowDownCircle, GitMerge, LogOut, Menu, ChevronDown, BookOpen, FlaskConical, Calculator, Wallet, BarChart3, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PeriodSelector } from "@/components/period-selector";
@@ -29,6 +29,7 @@ const NAV = [
       { href: "/tools/late-fee", label: "Late Fee & Interest", icon: Calculator },
     ],
   },
+  { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { href: "/guide", label: "User Guide", icon: BookOpen },
   { href: "/seed", label: "Sample Data", icon: FlaskConical },
 ];
