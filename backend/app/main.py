@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.v1 import auth, gst, business, invoices, returns, waitlist, compliance, risk
+from app.api.v1 import auth, gst, business, invoices, returns, waitlist, compliance, risk, itr
 
 app = FastAPI(
     title="BeMyCa API",
@@ -25,6 +25,7 @@ app.include_router(returns.router, prefix=settings.API_V1_PREFIX)
 app.include_router(waitlist.router, prefix=settings.API_V1_PREFIX)
 app.include_router(compliance.router, prefix=settings.API_V1_PREFIX)
 app.include_router(risk.router, prefix=settings.API_V1_PREFIX)
+app.include_router(itr.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health")
